@@ -1,0 +1,969 @@
+# TELCOVAS KNOWLEDGE BASE
+# Source: telcovas_knowledge_base.html & telcovasworld.com
+# Format: Plain text, chunked by topic
+# Use for RAG, embeddings, or voice agent context
+
+============================================================
+SECTION: Company Overview
+============================================================
+
+[OVERVIEW_001]
+Telcovas empowers Communication Service Providers (CSPs) worldwide with cutting-edge digital transformation solutions.
+Key stats: 8+ offices worldwide, 100+ telcos served, 800M+ subscribers reached, 45+ countries.
+
+[OVERVIEW_002]
+Mission: Help CSPs achieve higher profitability and enhance customer experience through innovative solutions.
+Vision: Build a connected global community by driving digital transformation with cutting-edge services and solutions.
+
+[OVERVIEW_003]
+What Telcovas does: From network setup to cloud-based services, Telcovas assists CSPs in consulting, planning, designing, engineering, monitoring, and executing use cases to simplify operations and maximize efficiency.
+Core offerings: Consult, Analytics, Services, Digital Transformation, Products & Solutions.
+
+[OVERVIEW_004]
+Five core verticals:
+1. Core & Radio for 5G – next-gen network capabilities
+2. Private 5G – secure, high-performance private networks
+3. Roaming Solutions – seamless global connectivity
+4. Digital Value-Added Services – customer engagement and monetization
+5. Cybersecurity & AI – network security and intelligence
+
+[OVERVIEW_005]
+Global footprint: India, Africa (Ghana, Tanzania, Cameroon, Nigeria, South Africa, Kenya), Middle East (UAE, Sharjah), Southeast Asia (Vietnam), Latin America.
+Legal entity: Telcovas Solutions & Services Pvt. Ltd.
+Business contact: info@telcovasworld.com
+
+============================================================
+SECTION: Global Offices & Contacts
+============================================================
+
+[OFFICES_001]
+Business Headquarters (UAE):
+TelcoVas Solutions and Services Limited
+1005, Grosvenor Business Tower, Barsha Heights, Dubai, UAE
+Tel: +971 45700426
+
+[OFFICES_002]
+UAE (Sharjah):
+TelcoVas Solutions and Services Limited
+Saif-Office, P8-05-47, Saif-Zone, P.O.Box 122980, Sharjah, UAE
+Tel: +971 44 300924
+
+[OFFICES_003]
+India – Delhi (Noida):
+Office No. 1, The I-Thum, 4th Floor, Sector-62, Noida, Uttar Pradesh – 201301
+Ph: +91 11 46 562 007, Tel: +971 52 277 7796
+
+[OFFICES_004]
+India – Hyderabad:
+5th Floor B-Block, Sanali Info Park, Road No. 2, Banjara Hills, Hyderabad – 500034, Telangana
+Ph: +91 11 46 562 007, Tel: +91 9966235924
+
+[OFFICES_005]
+Ghana (Accra):
+6th & 7th Floor (Regus) Atlantic Tower, Plot 16 Airport City, Accra, Ghana
+Tel: +233596921242
+
+[OFFICES_006]
+Tanzania (Dar es Salaam):
+Acacia Estates Offices, 1st Floor, Plot no. 84, Kinondoni Road, P.O. Box 38568, Dar es Salaam
+Phone: +255 22 219 8000, Tel: +255 655 209 106
+
+[OFFICES_007]
+Nigeria (Lagos):
+160, Awolowo Road, SW Ikoyi, Lagos, Nigeria
+Tel: +234 803 560 1922
+
+[OFFICES_008]
+South Africa (Sandton):
+Spaces-Broadacres, Willowwood Office Park, Cnr 3rd Street and Cedar Road, Sandton, Gauteng 2021
+
+[OFFICES_009]
+Cameroon (Douala):
+P.O. Box 886, Bonapriso, Douala, Cameroon
+
+[OFFICES_010]
+Kenya (Nairobi):
+The Mirage, M1 U7, Waiyaki Way, Nairobi, Kenya
+
+[OFFICES_011]
+Business Enquiries: info@telcovasworld.com
+Website: https://telcovasworld.com
+
+============================================================
+SECTION: Clients & Testimonials
+============================================================
+
+[CLIENTS_001]
+Telcovas serves around 800 million subscribers across 50+ countries, working with leading telecom operators worldwide.
+
+[CLIENTS_002]
+Testimonial from MTN:
+"Very well thought out and articulate communication solutions. Clear milestones, deadlines, and fast work. Patience. Infinite patience. No shortcuts. The best part… always solving problems with great original ideas!"
+
+[CLIENTS_003]
+Testimonial from Ethio Telecom:
+"Telcovas has been handling our VAS and IT requirements for three years and has been always responsive to our needs. The team is incredibly efficient and focused on developing custom solutions according to the specific client requirements."
+
+[CLIENTS_004]
+Testimonial from TIGO TZ:
+"Telcovas is definitely one of the most reliable telecom solution providers. The team was always ready to take requirements and develop solutions that were best tailored to our needs. Their solutions helped us manage connectivity and monitor devices more efficiently."
+
+[CLIENTS_005]
+Testimonial from Airtel Africa plc:
+"Telcovas services and solutions are totally reliable. The team is knowledgeable and supportive which cuts on the time and effort required for discussing requirements. They take feedback seriously and make sure to deliver what their clients want."
+
+[CLIENTS_006]
+Testimonial from Vodafone:
+"Quite satisfied. We reached them for roaming solutions and they were quick to discuss our requirements. The team worked diligently and provided suitable solutions to upscale our roaming service."
+
+[CLIENTS_007]
+Partner telcos: Airtel, Airtel Africa, Claro, DU, Ethio Telecom, Etisalat, GLO, MobiFone, MTN, Omantel, Ooredoo, Smart, Telecom (multiple), Telenor, TIGO, Vodafone.
+
+============================================================
+SECTION: Partners & Certifications
+============================================================
+
+[PARTNERS_001]
+Technology partners: Amazon Web Services (AWS), Google Cloud, Microsoft Azure, Cisco, Palo Alto Networks, HP, Cognifitech.
+
+[PARTNERS_002]
+Memberships & certifications: TM Forum Associate Member, ISO Certified.
+
+============================================================
+SECTION: Careers
+============================================================
+
+[CAREERS_001]
+Telcovas offers a dynamic, international work environment with opportunities for growth across multiple disciplines.
+
+[CAREERS_002]
+Why work at Telcovas?
+- Personal development: continuous learning and skill-building
+- Friendly atmosphere: collaborative and supportive culture
+- International projects: work across 45+ countries
+- Respect & trust: values-driven environment
+- Stable employment: long-term career growth
+- R&D centers: access to dedicated research and development
+
+[CAREERS_003]
+Job categories:
+- Analysis: Implementation Consultants, IT Solutions Architects
+- Software Production & Development: Java, JavaScript, C++, .NET, SQL; roles: System Engineer, Database Engineer, DevOps
+- Sales & Consulting: Sales Specialist, Pre-sales Consultant, Business Development Manager
+- Project & Team Management: leadership roles
+
+[CAREERS_004]
+Career contact: career@telcovasworld.com
+Application form: https://telcovasworld.com/careers/
+
+============================================================
+SECTION: PRISM Platform
+============================================================
+
+[PRISM_001]
+PRISM is Telcovas's Service Creation Platform – visual workflows, pre-built protocol stacks, and cloud-native infrastructure for building any telecom solution 10x faster.
+
+[PRISM_002]
+What is PRISM? Provides shared infrastructure so every product starts with protocol stacks, session management, analytics, and AI/ML – ready from day one. Enables telecom engineers to build carrier-grade products without starting from scratch.
+
+[PRISM_003]
+Core capabilities:
+1. Visual Workflow Builder – drag-and-drop interface for designing complex telecom applications.
+2. Signaling Protocol Stacks – production-ready SS7 (MAP, CAP, INAP), Diameter (Gx, Rx, Sy, Sp, S6a), GTPv1/v2, and SIP implementations.
+3. AI/ML Scoring Engine – real-time analytics pipeline with Apache Kafka and Spark for fraud detection, anomaly detection.
+4. Unified Observability – Prometheus metrics, Grafana dashboards, ELK log aggregation, intelligent alerting.
+5. Session Management – Redis-backed distributed session framework supporting millions of concurrent sessions.
+6. Cloud-Native Infrastructure – Kubernetes-orchestrated microservices, multi-model persistence (PostgreSQL, MongoDB, Redis).
+
+[PRISM_004]
+Products built on PRISM (8 products, 45+ countries):
+- AI-Driven Network Assurance
+- Intelligent Mobile Engine
+- PRISM PCRF
+- Signaling Firewalls
+- DPI Platform
+- IWF Content Filtering
+- Spam Command Centre
+- VIP Experience Manager
+
+[PRISM_005]
+Key technical details:
+- AI-Driven Network Assurance: Proactive health monitoring with ML-based fault prediction.
+- Intelligent Mobile Engine: 5G/4G roaming steering, silent roamer detection, OTA configuration.
+- PRISM PCRF: Cloud-native policy control with VoLTE support, FUP enforcement, sponsored data.
+- Signaling Firewalls: SS7 and Diameter security with real-time threat detection.
+- DPI Platform: Deep packet inspection for traffic classification, content filtering.
+- Spam Command Centre: Multi-channel spam detection across voice, SMS, data with AI pattern recognition.
+- VIP Experience Manager: Subscriber-tier aware QoS optimization.
+
+[PRISM_006]
+Contact: https://telcovasworld.com/prism/
+
+============================================================
+SECTION: Technical – Managed Services
+============================================================
+
+[TECH_MS_001]
+Telcovas Technical Managed Services help CSPs offload complex network operations to experienced telecom engineers, ensuring maximum uptime and efficiency.
+
+[TECH_MS_002]
+Covers full lifecycle: planning, design, deployment, monitoring, optimization.
+
+[TECH_MS_003]
+Key service areas:
+- Network planning, design, and engineering
+- Deployment and integration services
+- 24/7 network monitoring and NOC operations
+- Performance optimization and capacity management
+- Fault management and incident resolution
+- OSS/BSS system management
+
+[TECH_MS_004]
+URL: https://telcovasworld.com/technical-ms/
+
+============================================================
+SECTION: Business Consulting
+============================================================
+
+[CONSULTING_001]
+Telcovas Business Consulting helps CSPs navigate strategic decisions, identify growth opportunities, and develop actionable roadmaps for digital transformation.
+
+[CONSULTING_002]
+Scope of consulting:
+- Revenue assurance and monetization strategy
+- Digital transformation roadmapping
+- Roaming commercial strategy
+- VAS business case development
+- Market entry and competitive analysis
+- Regulatory compliance advisory
+- Technology partner evaluation and selection
+
+[CONSULTING_003]
+URL: https://telcovasworld.com/business-consulting/
+
+============================================================
+SECTION: 5G Core (5GC)
+============================================================
+
+[5GC_001]
+A cloud-native 5G Core solution for CSPs transitioning from LTE to 5G Standalone, offering ultra-low latency, massive connectivity, and enterprise-grade reliability.
+
+[5GC_002]
+What is 5G Core? The central nervous system of a 5G network, built on cloud-native, service-based architecture (SBA) allowing network functions to communicate via APIs – enabling flexibility, scalability, and rapid service launch.
+
+[5GC_003]
+Architecture features:
+- Cloud-native: fully virtualized & containerized (Kubernetes, Docker Swarm), microservices-based, edge computing integration (MEC)
+- Supports both Standalone (SA) and Non-Standalone (NSA) architectures
+- Seamless interworking with 4G EPC
+
+[5GC_004]
+Network functions in 5GC:
+- UPF: User Plane Function – high-speed, low-latency data transfer
+- AMF: Access & Mobility Management – mobility, handovers
+- SMF: Session Management – IP allocation, QoS
+- NRF: Network Repository – NF discovery and registration
+- PCF: Policy Control – dynamic service prioritization
+- NEF: Network Exposure – API integration with third-party apps
+
+[5GC_005]
+5G Radio Access Network (RAN):
+- O-RAN compliant architecture, multi-vendor interoperability
+- Cloud-based RAN virtualization
+- AI-powered RAN optimization for energy efficiency
+- Massive MIMO & beamforming, mmWave & Sub-6 GHz support
+- Small cells & DAS solutions
+
+[5GC_006]
+Security & reliability:
+- IPSec, TLS, end-to-end encryption
+- Carrier-grade reliability: 99.999% uptime SLA
+- AI-driven network optimization, predictive analytics, automated healing
+
+[5GC_007]
+Why choose Telcovas 5G Core?
+- Future-proof, scalable architecture
+- Interoperability with multi-vendor ecosystems
+- AI-driven automation optimizes CAPEX & OPEX
+
+============================================================
+SECTION: 5G Private Network
+============================================================
+
+[5G_PRIVATE_001]
+Telcovas Private 5G is an enterprise-grade solution built on a Certified 5G Standalone Core, advanced RAN, and high-performance UPF – designed for industries transitioning from legacy networks.
+
+[5G_PRIVATE_002]
+Key features:
+- Seamless integration with existing infrastructure
+- Real-time data processing via Multi-access Edge Computing (MEC) with near-zero latency
+- Intelligent network management with AI-driven optimization, network slicing, QoS management
+
+[5G_PRIVATE_003]
+Industry applications:
+- Manufacturing: enhanced efficiency, automation, security
+- Ports: automation, efficiency, security in maritime operations
+- Airports: passenger experience, security, operational efficiency
+- Mining: safety, real-time monitoring, autonomous vehicles, IoT
+- Healthcare: patient care, telemedicine, robotic surgeries, IoT monitoring
+
+============================================================
+SECTION: 5G for Manufacturing
+============================================================
+
+[5G_MFG_001]
+A 5G private network in manufacturing enhances efficiency, automation, and security on the factory floor through real-time connectivity and intelligent monitoring.
+
+[5G_MFG_002]
+Use cases:
+- Autonomous robotics and AGV connectivity
+- Real-time machine monitoring and predictive maintenance via IoT sensors
+- Enhanced worker safety with location tracking and wearables
+- Quality control automation with low-latency video analytics
+- Digital twin integration for factory simulation
+- Secure, isolated network for OT/IT convergence
+
+============================================================
+SECTION: 5G for Ports
+============================================================
+
+[5G_PORTS_001]
+A 5G private network greatly enhances automation, efficiency, and security in maritime port operations.
+
+[5G_PORTS_002]
+Use cases:
+- Autonomous cranes and port machinery control
+- Real-time container tracking and inventory management
+- Remote monitoring of vessels and dockside equipment
+- Secure communications across large maritime areas
+- Integration with logistics and supply chain platforms
+- High-bandwidth video surveillance and security systems
+
+============================================================
+SECTION: 5G for Airports
+============================================================
+
+[5G_AIRPORTS_001]
+A 5G private network significantly enhances passenger experience, security, and operational efficiency across airport environments.
+
+[5G_AIRPORTS_002]
+Use cases:
+- Real-time passenger flow management and crowd analytics
+- Autonomous baggage handling and tracking
+- Smart security screening with AI video analytics
+- Seamless passenger Wi-Fi integration and digital services
+- Remote aircraft monitoring and ground vehicle management
+- Connected retail and personalized traveler experiences
+
+============================================================
+SECTION: 5G for Mining
+============================================================
+
+[5G_MINING_001]
+A 5G private network in mining enhances safety, efficiency, and automation through real-time monitoring, autonomous vehicles, and IoT integration.
+
+[5G_MINING_002]
+Use cases:
+- Remote operation of drilling and heavy machinery
+- Real-time environmental and safety monitoring (gas, temperature)
+- Autonomous haulage systems (trucks and vehicles)
+- Worker safety tracking and emergency response systems
+- High-precision surveying with connected drones
+- Operational data integration with mine management systems
+
+============================================================
+SECTION: 5G for Healthcare
+============================================================
+
+[5G_HEALTHCARE_001]
+A 5G private network in healthcare enhances patient care, improves hospital efficiency, and enables real-time data transmission for critical medical applications.
+
+[5G_HEALTHCARE_002]
+Use cases:
+- Telemedicine and remote patient consultations with HD video
+- Remote-assisted and robotic surgeries with ultra-low latency
+- Real-time patient monitoring via IoT wearables and sensors
+- Smart hospital automation (asset tracking, medication delivery)
+- Secure EHR (Electronic Health Records) transmission
+- Ambulance-to-hospital data streaming for emergency care
+
+============================================================
+SECTION: Roaming Solutions – Overview
+============================================================
+
+[ROAM_OVERVIEW_001]
+Roaming has always been the premium source of revenue for CSPs. Telcovas's roaming portfolio serves both technical and business needs tailored to the full roaming ecosystem.
+
+[ROAM_OVERVIEW_002]
+Portfolio includes:
+- Smart Probe: real-time active intelligence for service and network assurance
+- Tech Roam: "Roam like home" offering, discounted pricing models
+- Bizz Roam: digitizes entire commercial roaming process (15+ years expertise)
+- Network Roaming: focus on revenue margins and customer experience
+- Globicall / eSIM: B2C solution for global calling
+- ARA: Automated Roaming Assist – AI-driven automation
+
+============================================================
+SECTION: Smart Probe
+============================================================
+
+[SMART_PROBE_001]
+Telcovas Smart Probe provides active intelligence to CSPs in real-time for service and network assurance and customer analytics, enabling proactive network operations.
+
+[SMART_PROBE_002]
+Key capabilities:
+- Real-time service and network quality monitoring
+- Customer analytics for roaming subscribers
+- Proactive detection of network and roaming issues
+- KPI dashboards for operations teams
+- Anomaly detection and alerting
+
+============================================================
+SECTION: Tech Roam
+============================================================
+
+[TECH_ROAM_001]
+Tech Roam enables the "Roam Like Home" concept, allowing CSPs to engage roaming partners and increase roaming traffic through discounted pricing models.
+
+[TECH_ROAM_002]
+Key capabilities:
+- Partner engagement framework for roaming traffic growth
+- Discounted wholesale pricing models
+- Roam-like-home (RLH) policy implementation
+- Data analytics for roaming subscriber behavior
+- Revenue optimization through smarter partner agreements
+
+============================================================
+SECTION: Bizz-Roam (Commercial Roaming)
+============================================================
+
+[BIZZ_ROAM_001]
+Utilizing 15+ years of roaming domain expertise, Bizz-Roam digitizes the entire commercial roaming process for mobile operators.
+
+[BIZZ_ROAM_002]
+Key capabilities:
+- End-to-end digital roaming commercial process management
+- IOT (Inter-Operator Tariff) management
+- Roaming agreement lifecycle management
+- Invoice and settlement automation
+- TAP and NRTRDE file handling
+- Roaming revenue analytics and reporting
+- Dispute management tools
+
+============================================================
+SECTION: Network Roaming
+============================================================
+
+[NETWORK_ROAMING_001]
+Telcovas Network Roaming Solutions enable CSPs to effectively operate their roaming infrastructure, focus on revenue margins, and enhance customer experience.
+
+[NETWORK_ROAMING_002]
+Components: Steering of Roaming, Border Roaming Controller, Welcome SMS & Tariff Advisory, Smart Probes, Tech Roam.
+
+============================================================
+SECTION: Steering of Roaming
+============================================================
+
+[STEERING_ROAM_001]
+Intelligent roaming steering ensures subscribers connect to preferred partner networks, maximizing roaming revenue and customer quality of experience.
+
+[STEERING_ROAM_002]
+Key capabilities:
+- Preferred PLMN selection policy enforcement
+- Real-time roaming partner steering decisions
+- Silent roamer detection and re-attachment
+- SIM-based and network-based steering mechanisms
+- Partner traffic optimization reporting
+
+============================================================
+SECTION: Border Roaming Controller
+============================================================
+
+[BORDER_CTRL_001]
+Manages and controls roaming subscriber behavior in border regions where multiple networks overlap, preventing unintended network selection and revenue leakage.
+
+[BORDER_CTRL_002]
+Key capabilities:
+- Geo-fenced border area management
+- Prevention of involuntary roaming at border zones
+- Subscriber notification in border regions
+- Roaming traffic analytics at border nodes
+- Regulatory compliance for cross-border roaming
+
+============================================================
+SECTION: Welcome SMS & Roaming Tariff Advisory
+============================================================
+
+[WELCOME_SMS_001]
+Automatically sends personalized welcome messages and tariff information to subscribers upon arrival in a foreign network, enhancing transparency and customer experience.
+
+[WELCOME_SMS_002]
+Key capabilities:
+- Automated welcome SMS upon network attachment in a foreign country
+- Personalized roaming tariff and data package information
+- Multi-language support for international subscribers
+- Tariff advisory for voice, SMS, and data roaming
+- Opt-in upsell opportunities for roaming packages
+
+============================================================
+SECTION: Globicall / eSIM
+============================================================
+
+[GLOBICALL_001]
+A B2C solution enabling international travelers to make affordable global calls using a virtual number or eSIM – without the high cost of traditional roaming.
+
+[GLOBICALL_002]
+Key capabilities:
+- Virtual number for low-cost international calling
+- eSIM capability – no physical SIM swap needed
+- Available via mobile app (iOS and Android)
+- Supports calls, SMS, and data in partner countries
+- Ideal for frequent international travelers and business users
+
+============================================================
+SECTION: ARA – Automated Roaming Assist
+============================================================
+
+[ARA_001]
+ARA (Automated Roaming Assist) uses AI and automation to streamline roaming operations, reduce manual intervention, and improve roaming service quality.
+
+[ARA_002]
+Key capabilities:
+- Automated detection and resolution of roaming issues
+- AI-driven roaming analytics and insights
+- Reduced MTTR for roaming faults
+- Automated test call generation for quality assurance
+- Integration with OSS/BSS systems
+
+============================================================
+SECTION: Digital VAS Overview
+============================================================
+
+[VAS_OVERVIEW_001]
+Telcovas empowers CSPs with cutting-edge Digital Value-Added Services (VAS) designed to enhance customer experience and drive incremental revenue growth.
+
+[VAS_OVERVIEW_002]
+Why Digital VAS matters: Traditional voice revenues decline. Data pricing decreases. Global social media generates $36B+ annually from digital advertising – CSPs receive no share. Telcovas VAS enables CSPs to launch proprietary social media platforms, monetize digital advertising, and compete in the digital ecosystem.
+
+[VAS_OVERVIEW_003]
+What Telcovas VAS enables:
+- Launch proprietary social media and content-sharing platforms
+- Monetize digital advertising – own and manage digital ad spaces
+- Deliver engaging value-added services for retention
+- Compete as a digital powerhouse
+
+[VAS_OVERVIEW_004]
+VAS products: Selfie Star, Mobile Karaoke & Sing Along, Online Live TV (OTV), Mega Promotions, Giga Promo, Guess A Song, E-Sports & Games Portal, Trivia.
+
+============================================================
+SECTION: Selfie Star
+============================================================
+
+[SELFIE_STAR_001]
+Selfie Star allows CSPs to enhance their footprint in the digital world and monetize the OTT space through a proprietary social photo-sharing platform.
+
+[SELFIE_STAR_002]
+Core concept: Click – Upload – Share. A dedicated selfie and photo-sharing social network owned and operated by the CSP, available as mobile app and web platform.
+
+[SELFIE_STAR_003]
+Benefits:
+- CSP-branded social media presence
+- Advertising and monetization through owned digital channels
+- Enhanced customer engagement and retention
+- Data-driven insights into subscriber social behavior
+- Compete directly with OTT social media platforms
+
+============================================================
+SECTION: Mobile Karaoke & Sing Along
+============================================================
+
+[KARAOKE_001]
+M-Karaoke provides exposure to singing creativity on a world platform, allowing subscribers to record, upload, and share their performances.
+
+[KARAOKE_002]
+Core concept: Record – Upload – Share. Mobile karaoke platform enabling subscribers to enjoy singing at home and share globally.
+
+[KARAOKE_003]
+Benefits:
+- High subscriber engagement through entertainment
+- Social sharing features driving organic growth
+- Monetization via premium content and subscriptions
+- Integration with music licensing for legal karaoke tracks
+
+============================================================
+SECTION: Online Live TV (OTV)
+============================================================
+
+[OTV_001]
+Online TV enables CSPs to launch their own Live Streaming Platform with Regional and International Content, entering the IPTV and OTT video market.
+
+[OTV_002]
+Benefits:
+- CSP-owned live TV streaming platform
+- Regional and international content library
+- Revenue from subscription fees and advertising
+- Compete with global OTT platforms (Netflix, YouTube) locally
+- Drives data consumption on the operator's network
+
+============================================================
+SECTION: Mega Promotions
+============================================================
+
+[MEGA_PROMO_001]
+Telcovas Mega Promotions provides an excellent opportunity for CSPs to run bumper draws for end customers, going beyond simple network benefits to create excitement and loyalty.
+
+[MEGA_PROMO_002]
+Features:
+- Bumper prize draws (cars, cash, electronics, travel)
+- Operator-branded promotional campaigns
+- Subscriber engagement and churn reduction
+- Data-driven campaign management
+
+============================================================
+SECTION: Giga Promo
+============================================================
+
+[GIGA_PROMO_001]
+Giga Promo offers large data allowance promotions for mobile subscribers, covering social media, streaming, or general internet use to drive data revenue growth.
+
+[GIGA_PROMO_002]
+Features:
+- Large data bundle promotions (gigabyte-scale allocations)
+- Social media-specific data packages
+- Streaming bundles for video platforms
+- Flexible campaign configuration per operator
+
+============================================================
+SECTION: Guess A Song
+============================================================
+
+[GUESS_SONG_001]
+An interactive entertainment service where subscribers try to identify a song based on clues – lyrics, sound, or themes – to win prizes and data rewards.
+
+[GUESS_SONG_002]
+Features:
+- Music-based trivia and engagement game
+- Multiple clue formats: lyrics, audio clips, themes
+- Data rewards and airtime prizes
+- High replay value driving daily active engagement
+
+============================================================
+SECTION: E-Sports & Games Portal
+============================================================
+
+[ESPORTS_001]
+A comprehensive hub for gaming communities, eSports competitions, and content related to eSports – allowing CSPs to tap into the rapidly growing global gaming market.
+
+[ESPORTS_002]
+Features:
+- Gaming community portal owned by the CSP
+- eSports tournaments and competition management
+- Game download and streaming services
+- In-game purchase and payment integration
+- Leaderboards, achievements, and community features
+- Data monetization through gaming traffic analytics
+
+============================================================
+SECTION: Trivia
+============================================================
+
+[TRIVIA_001]
+An exciting, prize-filled trivia service where subscribers participate to win smartphones, cash prizes, data, and trips to destinations like Dubai.
+
+[TRIVIA_002]
+Features:
+- Interactive trivia questions across multiple categories
+- High-value prizes: smartphones, cash, data bundles, foreign trips
+- Daily/weekly/monthly question cycles
+- Drives subscriber engagement and brand loyalty
+- Generates premium SMS and data revenue
+
+============================================================
+SECTION: Cybersecurity
+============================================================
+
+[CYBERSEC_001]
+Telcovas Cyber Operating Capability: From disconnected controls to integrated, decision-driven cyber resilience. Outcome-first. Architecture-led. Built to operate at enterprise scale.
+
+[CYBERSEC_002]
+The problem: Cyber risk is an enterprise risk with financial, operational, and reputational consequences. Fragmentation of controls leads to material incidents despite security tool investments.
+
+[CYBERSEC_003]
+Telcovas philosophy:
+- Outcome-first – business impact before technology decisions
+- Vendor-neutral – architecture over product bias
+- Architecture-led – operating model precedes implementation
+- Integration-focused – SOC, identity, cloud, OT, risk operate as one system
+- Operationalization-driven – ownership, workflows, SLAs, reporting built in
+- Speed & resilience – fast wins with durable foundations
+
+[CYBERSEC_004]
+11 integrated capabilities:
+1. Exposure & Attack Surface Management
+2. Attack Path Analysis & Breach Simulation
+3. Unified SOC & Threat Detection
+4. Incident Response & Threat Containment
+5. Identity Security & Access Governance
+6. Zero Trust Strategy & Architecture
+7. Application Security & DevSecOps
+8. Data Security & Information Protection
+9. Cyber Risk Governance & Quantification
+10. Third-Party & Supply Chain Risk
+11. OT Security & Critical Infrastructure Protection
+
+[CYBERSEC_005]
+Operating cycle: Discover → Prioritize → Detect → Respond → Quantify → Resilience
+
+[CYBERSEC_006]
+How Telcovas delivers cybersecurity:
+1. Advisory & Architecture – define operating models, design target-state architectures
+2. Integration & Implementation – select and integrate best-fit security technologies
+3. Operational Enablement & Run – SOC onboarding, tuning, playbooks, SLAs, reporting
+
+[CYBERSEC_007]
+Engagements start with focused diagnostics:
+- Executive Risk Summary aligned to business impact
+- Prioritised roadmap based on exploitability and consequence
+- Architecture recommendations for sustainable improvement
+- Clear next steps with defined ownership
+
+============================================================
+SECTION: Spam Call Controller
+============================================================
+
+[SPAMCALL_001]
+A real-time, AI-powered spam-filtering solution for mobile network operators (MNOs) with on-premises, cloud, and hybrid deployment options.
+
+[SPAMCALL_002]
+Global spam problem statistics:
+- 107 billion spam calls per day worldwide
+- 6–10 spam calls/SMS per user per month
+- 30% of annual financial fraud linked to spam
+
+[SPAMCALL_003]
+Why choose Telcovas Spam Call Controller?
+- Real-time detection & protection – instantly blocks spam calls & messages
+- Realtime CLI spam notification – alerts users about potential spam callers
+- Seamless integration – works with existing telecom infrastructure
+- Caller reputation scoring – dynamically assigns trust scores
+- AI-driven innovation – adapts to emerging threats with ML
+- Scalable & reliable – handles high traffic with minimal latency
+
+[SPAMCALL_004]
+Core features:
+- AI-powered detection: suspicious call patterns and SMS using ML, flags problematic URLs
+- Caller reputation scoring: trust levels based on history and behavior, constantly updates
+- Customizable rule engine: blacklist/whitelist numbers, call pattern monitoring, keyword flagging
+
+[SPAMCALL_005]
+Deployment: On-Premises, Cloud-Based, Hybrid.
+
+============================================================
+SECTION: Location-Based Services (LBS)
+============================================================
+
+[LBS_001]
+LBS rely on network and device technologies to provide accurate location data for navigation, emergency response, and asset tracking – combining GMLC, SMLC, and A-GPS.
+
+[LBS_002]
+Core components:
+- GMLC (Gateway Mobile Location Center): central point for managing location requests, privacy controls, roaming support
+- SMLC (Serving Mobile Location Center): precise location calculations using triangulation, E-OTD, UTDOA
+- A-GPS (Assisted GPS): speeds up location fix by providing satellite data via network, E911/E112 support
+
+[LBS_003]
+Advanced LBS features: Real-Time Location Tracking, Geofencing, Proximity-Based Alerts, Enhanced Emergency Services, Navigation & Mapping, Context-Aware Services, Location Analytics.
+
+[LBS_004]
+Benefits to mobile operators:
+- Revenue generation: premium LBS subscriptions, targeted advertising, enterprise partnerships, increased ARPU
+- Operational efficiency: network optimization, fraud prevention, asset management, proactive customer support
+- Emerging technology support: 5G and IoT integration, edge computing, smart city initiatives
+
+============================================================
+SECTION: DPI & Suite
+============================================================
+
+[DPI_001]
+Deep Packet Inspection (DPI) and network traffic intelligence tools for telecom operators, enabling policy enforcement, content filtering, and traffic analytics.
+
+[DPI_002]
+DPI Platform capabilities (via PRISM):
+- Deep packet inspection for traffic classification
+- Content filtering for regulatory compliance and child safety
+- Header enrichment for targeted advertising and analytics
+- Application-aware traffic analytics
+- QoS and policy enforcement based on application type
+- Zero-rating and sponsored data implementation
+- Bandwidth management and throttling
+
+[DPI_003]
+URL: https://telcovasworld.com/dpi-suite/
+
+============================================================
+SECTION: Ensemble OSS
+============================================================
+
+[OSS_001]
+A comprehensive OSS (Operations Support System) suite designed to transform telecom network operations, providing end-to-end visibility and control.
+
+[OSS_002]
+Key modules:
+- Network Inventory Management
+- Fault & Alarm Management
+- Performance Management & KPI Analytics
+- Configuration & Change Management
+- Service Assurance & SLA Monitoring
+- Workflow Automation & Ticketing
+
+[OSS_003]
+Transformation benefits:
+- Reduced network OPEX through automated operations
+- Improved mean-time-to-restore (MTTR) for network faults
+- End-to-end network visibility on a unified dashboard
+- Faster service provisioning and activation
+- Regulatory compliance reporting
+
+[OSS_004]
+URL: https://telcovasworld.com/ensemble-oss/
+
+============================================================
+SECTION: Device Management
+============================================================
+
+[DEVICE_MGMT_001]
+A comprehensive device management solution for mobile operators to remotely manage, configure, and monitor subscriber devices at scale.
+
+[DEVICE_MGMT_002]
+Key capabilities:
+- Remote device configuration and provisioning (OTA)
+- Device diagnostics and troubleshooting
+- Software and firmware update management
+- Device inventory and lifecycle tracking
+- BYOD policy enforcement
+- IoT device management for enterprise deployments
+- Security policy enforcement on subscriber devices
+
+[DEVICE_MGMT_003]
+URL: https://telcovasworld.com/device-management/
+
+============================================================
+SECTION: Digital Onboarding Solutions
+============================================================
+
+[ONBOARDING_001]
+Digital Onboarding Solutions enable mobile operators to streamline subscriber registration and SIM activation through fully digital, paperless workflows.
+
+[ONBOARDING_002]
+Key capabilities:
+- eKYC (Electronic Know Your Customer) verification
+- Biometric identity verification (facial recognition, fingerprint)
+- Digital document capture and OCR processing
+- Remote SIM provisioning and eSIM activation
+- Real-time identity validation against government databases
+- Mobile app and web-based onboarding interfaces
+- Regulatory compliance for subscriber registration
+
+[ONBOARDING_003]
+URL: https://telcovasworld.com/digital-onboarding-solutions/
+
+============================================================
+SECTION: Testing Solutions
+============================================================
+
+[TESTING_001]
+End-to-end telecom testing solutions to validate network services, roaming, and application performance across multiple protocols and technologies.
+
+[TESTING_002]
+Testing capabilities:
+- Network protocol testing (SS7, Diameter, SIP, GTP)
+- Roaming service testing (voice, SMS, data)
+- 5G core network function testing
+- End-to-end service quality testing
+- Regression and performance testing
+- VAS and application testing
+- Automated test scripting and CI/CD integration
+
+[TESTING_003]
+URL: https://telcovasworld.com/testing-solutions/
+
+============================================================
+SECTION: Telcovas AI
+============================================================
+
+[AI_001]
+Telcovas AI delivers AI-powered capabilities to telecom operators – from intelligent customer interactions to personalized promotions and network analytics.
+
+[AI_002]
+AI Products:
+- Telco AI: AI-powered platform for intelligent customer service, network optimization, predictive analytics. Available at http://telcovas.ai
+- AI Studio: a studio for building and deploying custom AI models for telecom use cases. Available at http://telcovasai.com
+
+[AI_003]
+AI use cases in Telcovas portfolio:
+- AI-driven spam call detection and blocking
+- Predictive network maintenance and fault detection
+- AI-powered roaming steering decisions
+- ML-based fraud detection via PRISM scoring engine
+- Customer churn prediction and retention campaigns
+- Personalized promotion targeting (Mega Promotions, Giga Promo)
+- Natural language AI for customer support chatbots
+- AI-optimized 5G RAN resource management
+
+[AI_004]
+Homepage tagline: "Delight your customers with swift responses and tailor-made promotions to ensure their satisfaction."
+
+Peeyush (Kumar) Singh - CEO & Managing Director
+Samer Mehaidly - Vice President of Business Development
+Guruprasad Muralidharan - Vice President of Cyber Practice
+Punit Oza - Director of Products and Strategic Planning
+Syed Ahtaysham - Chief Technology Officer (CTO)
+Prabhat Shekhar - Global Sales Director
+Ashok Kumar Singh - Director
+Neelam Singh - Director
+Nitin Verma - General Manager - Business Analyst
+
+
+
+Peeyush Singh is the Founder and CEO of Telcovas Solutions & Services. He leads the company in providing advanced 5G core networks, AI-driven automation, and secure, cloud-native telecom solutions, focusing on private 5G and satellite integration. He is frequently featured at major telecom events like MWC and 5GMENA. 
+
+Key details about Telcovas leadership:
+Founder & CEO: Peeyush Singh.
+Focus Areas: 5G Stack (SA/NSA), AI-driven runtime trust, cybersecurity, and network intelligence.
+**Activity:**Actively leading demonstrations at MWC 2026. 
+
+If you are looking to connect with him or need more, I can help you find:
+His LinkedIn profile for direct connection
+Telcovas' latest press releases or white papers
+Details on their 5G solutions 
+
+Employee informations : Personal Information - Aditya Barman
+
+Basic Details
+
+-   Name: Aditya Barman
+-   Current Role: AI Data Analyst
+-   Date of Birth: 27 August
+-   Organization: Telcovas Solutions and Services
+-   Location: Hyderabad
+-   Employee ID : tv098
+Professional Summary
+
+Aditya Barman is a Data Analyst at Telcovas Solutions and Services. He
+works on analyzing datasets, generating insights, and supporting
+data-driven decision-making processes. His expertise lies in handling
+large volumes of data, applying analytical techniques, and preparing
+meaningful reports for business improvement.
+
+Key Highlights
+
+-   Skilled in data analysis and interpretation.
+-   Works with business and technical teams to deliver insights.
+-   Contributes to data-driven solutions at Telcovas Solutions and
+    Services.
+
+
+
+============================================================
+END OF KNOWLEDGE BASE
+============================================================
