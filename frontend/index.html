@@ -1,37 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Local AI Chat</title>
-  <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Local Voice AI</title>
+<link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
 
 <div class="app">
 
-  <header class="header">
-    <h1>Local AI Assistant</h1>
-    <p>FastAPI + Ollama + ChromaDB</p>
+  <header class="page-header">
+    <h1>Local Voice AI</h1>
+    <p>FastAPI + Ollama + Whisper + Kokoro</p>
   </header>
 
-  <main class="chat-container">
+  <section class="top-section">
 
-    <div id="messages" class="messages"></div>
+    <div class="avatar-panel">
+      <div id="preview" class="preview-frame"></div>
+    </div>
+
+    <div class="visualizer-panel">
+      <canvas id="visualizer"></canvas>
+    </div>
+
+  </section>
+
+  <section class="bottom-section">
+
+    <div id="messages" class="messages">
+      <div class="message ai">
+        Hello. I am your local AI assistant.
+      </div>
+    </div>
+
+    <div id="typing" class="typing">
+      AI is thinking...
+    </div>
 
     <div class="input-area">
+
+      <button id="recordBtn" onclick="toggleRecording()">
+        🎤
+      </button>
+
       <input
-        type="text"
         id="messageInput"
-        placeholder="Ask something about the knowledge base..."
+        type="text"
+        placeholder="Ask something..."
       />
 
       <button onclick="sendMessage()">
         Send
       </button>
+
     </div>
 
-  </main>
+  </section>
 
 </div>
 

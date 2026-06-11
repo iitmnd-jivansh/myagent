@@ -1,8 +1,12 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import UploadFile, File
+from fastapi.responses import FileResponse
 
 from rag import ask_question
+from stt import transcribe_audio
+from tts import generate_speech
 
 
 app = FastAPI()
@@ -24,6 +28,7 @@ class ChatRequest(BaseModel):
 
 @app.get("/")
 async def root():
+
     return {
         "message": "Local AI backend is running"
     }
@@ -37,3 +42,29 @@ async def chat(req: ChatRequest):
     return {
         "response": response
     }
+
+
+@app.post("/transcribe")
+async def transcribe(file: UploadFile = File(...)):
+
+    temp_path = "temp_audio.wav"
+
+    with open(temp_path, "wb") as buffer:
+        buffer.write(await file.read())
+
+    text = transcribe_audio(temp_path)
+
+    return {
+        "text": text
+    }
+
+
+@app.post("/speak")
+async def speak(req: ChatRequest):
+
+    audio_path = generate_speech(req.message)
+
+    return FileResponse(
+        audio_path,
+        media_type="audio/wav"
+    )
