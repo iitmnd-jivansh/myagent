@@ -8,6 +8,8 @@ from rag import ask_question
 from stt import transcribe_audio
 from tts import generate_speech
 
+from weather import get_weather
+from news import get_news
 
 app = FastAPI()
 
@@ -37,7 +39,51 @@ async def root():
 @app.post("/chat")
 async def chat(req: ChatRequest):
 
-    response = ask_question(req.message)
+    query = req.message.strip()
+
+    query_lower = query.lower()
+
+    # Weather Intent
+    if "weather" in query_lower:
+
+        city = (
+            query_lower
+            .replace("weather", "")
+            .replace("in", "")
+            .strip()
+        )
+
+        if not city:
+            city = "Delhi"
+
+        response = get_weather(city)
+
+        return {
+            "response": response
+        }
+
+    # News Intent
+    if "news" in query_lower:
+
+        topic = (
+            query_lower
+            .replace("latest", "")
+            .replace("news", "")
+            .replace("about", "")
+            .strip()
+        )
+
+        if not topic:
+            topic = "india"
+
+        response = get_news(topic)
+
+        return {
+            "response": response
+        }
+
+    # Normal RAG Flow
+    response = ask_question(query)
 
     return {
         "response": response

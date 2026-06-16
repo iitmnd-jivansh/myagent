@@ -1,6 +1,6 @@
 import chromadb
 import ollama
-
+from search import search_web
 
 # Load Chroma database
 client = chromadb.PersistentClient(path="chroma_db")
@@ -8,6 +8,8 @@ client = chromadb.PersistentClient(path="chroma_db")
 collection = client.get_collection(
     name="knowledge_base"
 )
+
+SIMILARITY_THRESHOLD = 0.45
 
 
 def ask_question(query):
@@ -26,11 +28,24 @@ def ask_question(query):
         n_results=3
     )
 
-    # Combine retrieved context
-    context = "\n".join(results["documents"][0])
+    docs = results["documents"][0]
 
-    # Build prompt
-    prompt = f"""
+    distances = results.get(
+        "distances",
+        [[999]]
+    )[0]
+
+    use_kb = (
+        len(docs) > 0
+        and len(distances) > 0
+        and min(distances) < SIMILARITY_THRESHOLD
+    )
+
+    if use_kb:
+
+        context = "\n".join(docs)
+
+        prompt = f"""
 You are a helpful AI assistant.
 
 Answer ONLY using the provided context.
@@ -42,7 +57,33 @@ Question:
 {query}
 """
 
-    # Generate response
+        print("[RAG] Using Knowledge Base")
+
+    else:
+
+        web_answer = search_web(query)
+
+        context = (
+            web_answer
+            if web_answer
+            else "No information found."
+        )
+
+        prompt = f"""
+You are a helpful AI assistant.
+
+Use the following web information
+to answer the question.
+
+Web Information:
+{context}
+
+Question:
+{query}
+"""
+
+        print("[RAG] Using SearXNG")
+
     response = ollama.chat(
         model="llama3",
         messages=[
