@@ -67,6 +67,39 @@ function setIdle() {
   preview.innerHTML = buildSVG(0);
 }
 
+function setAgentState(state){
+
+    const el =
+        document.getElementById(
+            "agentState"
+        );
+
+    if(!el) return;
+
+    switch(state){
+
+        case "idle":
+            el.innerHTML =
+                "🟢 Idle";
+            break;
+
+        case "listening":
+            el.innerHTML =
+                "🎤 Listening";
+            break;
+
+        case "thinking":
+            el.innerHTML =
+                "🧠 Thinking";
+            break;
+
+        case "speaking":
+            el.innerHTML =
+                "🔊 Speaking";
+            break;
+    }
+}
+
 function startTalkingAnimation() {
 
   stopTalkingAnimation();
@@ -90,6 +123,7 @@ function stopTalkingAnimation() {
 }
 
 setIdle();
+setAgentState("idle");
 
 function addMessage(text, type) {
 
@@ -106,26 +140,61 @@ function addMessage(text, type) {
 
 function drawVisualizer(dataArray) {
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
 
-  const bars = 48;
-  const spacing = canvas.width / bars;
-  const centerY = canvas.height / 2;
+  const bars = Math.max(
+    14,
+    Math.floor(canvas.width / 12)
+  );
+
+  const centerY =
+    canvas.height / 2;
+
+  const spacing =
+    canvas.width / bars;
+
+  const barWidth =
+    Math.max(
+      3,
+      spacing * 0.65
+    );
 
   ctx.fillStyle = "white";
 
-  for (let i = 0; i < bars; i++) {
+  for (
+    let i = 0;
+    i < bars;
+    i++
+  ) {
 
-    const value = dataArray[i] || 0;
+    const sourceIndex =
+      Math.floor(
+        i *
+        dataArray.length /
+        bars
+      );
 
-    const height = Math.max(12, value * 2.2);
+    const value =
+      dataArray[sourceIndex] || 0;
 
-    const x = i * spacing;
+    const height =
+      Math.max(
+        4,
+        value * 0.75
+      );
+
+    const x =
+      i * spacing;
 
     ctx.fillRect(
       x,
       centerY - height / 2,
-      10,
+      barWidth,
       height
     );
   }
@@ -142,6 +211,7 @@ async function sendMessage() {
   input.value = "";
 
   typing.style.display = "block";
+  setAgentState("thinking");
 
   try {
 
@@ -245,10 +315,15 @@ async function speakResponse(text) {
     }
 
     audio.onplay = () => {
+
+      setAgentState("speaking");
+
       animate();
     };
 
     audio.onended = () => {
+
+      setAgentState("idle");
 
       clearVisualizer();
 
@@ -260,6 +335,8 @@ async function speakResponse(text) {
     await audio.play();
 
   } catch (err) {
+
+    setAgentState("idle");
 
     console.error(err);
 
@@ -307,6 +384,7 @@ async function startRecording() {
     );
 
     typing.style.display = "block";
+    setAgentState("thinking");
 
     const response = await fetch(
       "http://127.0.0.1:8000/transcribe",
@@ -324,6 +402,8 @@ async function startRecording() {
   };
 
   mediaRecorder.start();
+
+  setAgentState("listening");
 
   isRecording = true;
 
