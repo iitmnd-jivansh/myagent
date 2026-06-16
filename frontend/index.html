@@ -3,64 +3,77 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Local Voice AI</title>
+<title>MyAgent</title>
 <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
+<div class="app-shell">
 
-<div class="app">
+<aside class="sidebar">
 
-  <header class="page-header">
-    <h1>Local Voice AI</h1>
-    <p>FastAPI + Ollama + Whisper + Kokoro</p>
-  </header>
+<div class="brand">
+<h3>State</h3>
+<div id="agentState" class="state-display">
+🟢 Idle
+</div>
+</div>
 
-  <section class="top-section">
+<div class="panel avatar-panel">
+<div id="preview" class="preview-frame"></div>
+</div>
 
-    <div class="avatar-panel">
-      <div id="preview" class="preview-frame"></div>
-    </div>
+<div class="panel">
+<h3>TTS Visualizer</h3>
+<canvas id="visualizer"></canvas>
+</div>
 
-    <div class="visualizer-panel">
-      <canvas id="visualizer"></canvas>
-    </div>
+<div class="panel">
+<h3>System</h3>
+<div class="meta">STT <span>Whisper</span></div>
+<div class="meta">LLM <span>Llama3</span></div>
+<div class="meta">TTS <span>Kokoro</span></div>
+<div class="meta">Search <span>SearXNG</span></div>
+</div>
 
-  </section>
+</aside>
 
-  <section class="bottom-section">
+<main class="main">
 
-    <div id="messages" class="messages">
-      <div class="message ai">
-        Hello. I am your local AI assistant.
-      </div>
-    </div>
+<header class="hero">
+<h2>MyAgent</h2>
+<p>Knowledge Base • Web Search • News • Weather</p>
+</header>
 
-    <div id="typing" class="typing">
-      AI is thinking...
-    </div>
+<div id="messages" class="messages">
+<div class="message ai">
+Hello. I am your local AI assistant.
+</div>
+</div>
 
-    <div class="input-area">
+<div id="typing" class="typing">
+AI is thinking...
+</div>
 
-      <button id="recordBtn" onclick="toggleRecording()">
-        🎤
-      </button>
+<div class="input-area">
+<button id="recordBtn" onclick="toggleRecording()">
+🎤
+</button>
 
-      <input
-        id="messageInput"
-        type="text"
-        placeholder="Ask something..."
-      />
+<input
+id="messageInput"
+type="text"
+placeholder="Ask something..."
+/>
 
-      <button onclick="sendMessage()">
-        Send
-      </button>
+<button onclick="sendMessage()">
+Send
+</button>
+</div>
 
-    </div>
-
-  </section>
+</main>
 
 </div>
 
 <script src="script.js"></script>
 </body>
-</html>
+</html>	
