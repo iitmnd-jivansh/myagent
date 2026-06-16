@@ -3,13 +3,15 @@ import ollama
 from search import search_web
 
 # Load Chroma database
-client = chromadb.PersistentClient(path="chroma_db")
+client = chromadb.PersistentClient(
+    path="chroma_db"
+)
 
 collection = client.get_collection(
     name="knowledge_base"
 )
 
-SIMILARITY_THRESHOLD = 0.45
+SIMILARITY_THRESHOLD = 300
 
 
 def ask_question(query):
@@ -20,11 +22,15 @@ def ask_question(query):
         prompt=query
     )
 
-    query_embedding = query_embedding_response["embedding"]
+    query_embedding = query_embedding_response[
+        "embedding"
+    ]
 
     # Search vector database
     results = collection.query(
-        query_embeddings=[query_embedding],
+        query_embeddings=[
+            query_embedding
+        ],
         n_results=3
     )
 
@@ -35,10 +41,17 @@ def ask_question(query):
         [[999]]
     )[0]
 
+    best_distance = min(distances)
+
+    print("=" * 50)
+    print("Query:", query)
+    print("Best Distance:", best_distance)
+    print("Distances:", distances)
+    print("=" * 50)
+
     use_kb = (
         len(docs) > 0
-        and len(distances) > 0
-        and min(distances) < SIMILARITY_THRESHOLD
+        and best_distance < SIMILARITY_THRESHOLD
     )
 
     if use_kb:
@@ -57,7 +70,10 @@ Question:
 {query}
 """
 
-        print("[RAG] Using Knowledge Base")
+        print(
+            f"[RAG] Using Knowledge Base "
+            f"(distance={best_distance:.3f})"
+        )
 
     else:
 
@@ -82,7 +98,10 @@ Question:
 {query}
 """
 
-        print("[RAG] Using SearXNG")
+        print(
+            f"[RAG] Using SearXNG "
+            f"(distance={best_distance:.3f})"
+        )
 
     response = ollama.chat(
         model="llama3",
