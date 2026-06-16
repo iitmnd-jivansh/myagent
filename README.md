@@ -3,7 +3,5 @@ Steps to run
 2. ollama pull nomic-embed-text
 3. ollama serve
 4. Install requirements in requirements.in using pip(tested on python 3.11)
-5. In backend folder, uvicorn main:app --reload
-6. In frontend folder, python -m http.server 3000
-7. visit http://localhost:3000
+5. In frontend folder, click on .html {tested on chromium based browsers, firefox should work too} 
 
