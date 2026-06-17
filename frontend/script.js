@@ -19,6 +19,8 @@ let mediaRecorder;
 let audioChunks = [];
 let isRecording = false;
 
+let currentLanguage = "en";
+
 function clearVisualizer() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
 }
@@ -125,6 +127,53 @@ function stopTalkingAnimation() {
 setIdle();
 setAgentState("idle");
 
+const englishBtn =
+  document.getElementById("englishBtn");
+
+const hindiBtn =
+  document.getElementById("hindiBtn");
+
+if (englishBtn && hindiBtn) {
+
+  englishBtn.addEventListener(
+    "click",
+    () => {
+
+      currentLanguage = "en";
+
+      englishBtn.classList.add(
+        "active"
+      );
+
+      hindiBtn.classList.remove(
+        "active"
+      );
+
+      input.placeholder =
+        "Ask something...";
+    }
+  );
+
+  hindiBtn.addEventListener(
+    "click",
+    () => {
+
+      currentLanguage = "hi";
+
+      hindiBtn.classList.add(
+        "active"
+      );
+
+      englishBtn.classList.remove(
+        "active"
+      );
+
+      input.placeholder =
+        "कुछ पूछें...";
+    }
+  );
+}
+
 function addMessage(text, type) {
 
   const div = document.createElement("div");
@@ -223,7 +272,8 @@ async function sendMessage() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          message: message
+          message: message,
+          language: currentLanguage
         })
       }
     );
@@ -258,7 +308,8 @@ async function speakResponse(text) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          message: text
+          message: text,
+          language: currentLanguage
         })
       }
     );
@@ -381,6 +432,11 @@ async function startRecording() {
       "file",
       audioBlob,
       "recording.wav"
+    );
+
+    formData.append(
+      "language",
+      currentLanguage
     );
 
     typing.style.display = "block";

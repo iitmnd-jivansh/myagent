@@ -14,7 +14,10 @@ collection = client.get_collection(
 SIMILARITY_THRESHOLD = 300
 
 
-def ask_question(query):
+def ask_question(
+    query,
+    language="en"
+):
 
     # Create embedding for user query
     query_embedding_response = ollama.embeddings(
@@ -45,6 +48,7 @@ def ask_question(query):
 
     print("=" * 50)
     print("Query:", query)
+    print("Language:", language)
     print("Best Distance:", best_distance)
     print("Distances:", distances)
     print("=" * 50)
@@ -54,12 +58,28 @@ def ask_question(query):
         and best_distance < SIMILARITY_THRESHOLD
     )
 
+    if language == "hi":
+
+        language_instruction = """
+उत्तर केवल हिन्दी में दें।
+सभी उत्तर प्राकृतिक हिन्दी में दें।
+अंग्रेज़ी का उपयोग केवल आवश्यकता होने पर करें.
+"""
+
+    else:
+
+        language_instruction = """
+Answer only in English.
+"""
+
     if use_kb:
 
         context = "\n".join(docs)
 
         prompt = f"""
 You are a helpful AI assistant.
+
+{language_instruction}
 
 Answer ONLY using the provided context.
 
@@ -87,6 +107,8 @@ Question:
 
         prompt = f"""
 You are a helpful AI assistant.
+
+{language_instruction}
 
 Use the following web information
 to answer the question.

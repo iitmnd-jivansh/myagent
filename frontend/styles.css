@@ -13,6 +13,24 @@ body{background:#14121b;color:#e6e0ee;font-family:Arial,sans-serif;height:100vh;
     font-weight:600;
     background:rgba(255,255,255,.05);
 }
+.language-toggle{
+    display:flex;
+    gap:10px;
+    margin:0 0 10px 0;
+}
+
+.lang-btn{
+    padding:10px 16px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    background:#2b2933;
+    color:white;
+}
+
+.lang-btn.active{
+    background:#947dff;
+}
 .panel{padding:16px}
 .avatar-panel{display:flex;justify-content:center;align-items:center}
 .preview-frame{width:220px;max-width:100%}

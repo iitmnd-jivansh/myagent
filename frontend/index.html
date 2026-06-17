@@ -31,7 +31,7 @@
 <h3>System</h3>
 <div class="meta">STT <span>Whisper</span></div>
 <div class="meta">LLM <span>Llama3</span></div>
-<div class="meta">TTS <span>Kokoro</span></div>
+<div class="meta">TTS <span>Elevenlabs</span></div>
 <div class="meta">Search <span>SearXNG</span></div>
 </div>
 
@@ -54,8 +54,30 @@ Hello. I am your local AI assistant.
 AI is thinking...
 </div>
 
+<div class="language-toggle">
+
+<button
+id="englishBtn"
+class="lang-btn active"
+>
+English
+</button>
+
+<button
+id="hindiBtn"
+class="lang-btn"
+>
+हिन्दी
+</button>
+
+</div>
+
 <div class="input-area">
-<button id="recordBtn" onclick="toggleRecording()">
+
+<button
+id="recordBtn"
+onclick="toggleRecording()"
+>
 🎤
 </button>
 
@@ -68,6 +90,7 @@ placeholder="Ask something..."
 <button onclick="sendMessage()">
 Send
 </button>
+
 </div>
 
 </main>

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import UploadFile, File
+from fastapi import UploadFile, File, Form
 from fastapi.responses import FileResponse
 
 from rag import ask_question
@@ -26,6 +26,7 @@ app.add_middleware(
 
 class ChatRequest(BaseModel):
     message: str
+    language: str = "en"
 
 
 @app.get("/")
@@ -83,7 +84,18 @@ async def chat(req: ChatRequest):
         }
 
     # Normal RAG Flow
-    response = ask_question(query)
+
+    if req.language == "hi":
+
+        query = (
+            "उत्तर केवल हिन्दी में दें.\n\n"
+            + query
+        )
+
+    response = ask_question(
+    query,
+    req.language
+    )    
 
     return {
         "response": response
@@ -91,26 +103,36 @@ async def chat(req: ChatRequest):
 
 
 @app.post("/transcribe")
-async def transcribe(file: UploadFile = File(...)):
+async def transcribe(
+    file: UploadFile = File(...),
+    language: str = Form("en")
+):
 
     temp_path = "temp_audio.wav"
 
     with open(temp_path, "wb") as buffer:
         buffer.write(await file.read())
 
-    text = transcribe_audio(temp_path)
+    text = transcribe_audio(
+        temp_path,
+        language
+    )
 
     return {
         "text": text
     }
 
-
 @app.post("/speak")
 async def speak(req: ChatRequest):
 
-    audio_path = generate_speech(req.message)
+    audio_path = generate_speech(
+        req.message,
+        req.language,
+        "response.mp3"
+    )
 
     return FileResponse(
         audio_path,
-        media_type="audio/wav"
+        media_type="audio/mpeg",
+        filename="response.mp3"
     )
