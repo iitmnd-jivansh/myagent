@@ -6,7 +6,9 @@
 <title>MyAgent</title>
 <link rel="stylesheet" href="styles.css"/>
 </head>
+
 <body>
+
 <div class="app-shell">
 
 <aside class="sidebar">
@@ -19,7 +21,7 @@
 </div>
 
 <div class="panel avatar-panel">
-<div id="preview" class="preview-frame"></div>
+<canvas id="live2dCanvas"></canvas>
 </div>
 
 <div class="panel">
@@ -31,7 +33,7 @@
 <h3>System</h3>
 <div class="meta">STT <span>Whisper</span></div>
 <div class="meta">LLM <span>Llama3</span></div>
-<div class="meta">TTS <span>Elevenlabs</span></div>
+<div class="meta">TTS <span>ElevenLabs</span></div>
 <div class="meta">Search <span>SearXNG</span></div>
 </div>
 
@@ -58,15 +60,13 @@ AI is thinking...
 
 <button
 id="englishBtn"
-class="lang-btn active"
->
+class="lang-btn active">
 English
 </button>
 
 <button
 id="hindiBtn"
-class="lang-btn"
->
+class="lang-btn">
 हिन्दी
 </button>
 
@@ -76,8 +76,7 @@ class="lang-btn"
 
 <button
 id="recordBtn"
-onclick="toggleRecording()"
->
+onclick="toggleRecording()">
 🎤
 </button>
 
@@ -97,6 +96,13 @@ Send
 
 </div>
 
+<script src="Core/live2dcubismcore.min.js"></script>
+
+<script type="module"
+src="assets/index-DVG4LRbD.js">
+</script>
+
 <script src="script.js"></script>
+
 </body>
-</html>	
+</html>

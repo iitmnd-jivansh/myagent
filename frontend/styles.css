@@ -1,10 +1,50 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
 
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#14121b;color:#e6e0ee;font-family:Arial,sans-serif;height:100vh;overflow:hidden}
-.app-shell{display:grid;grid-template-columns:300px 1fr;height:100vh;padding:16px;gap:16px}
-.sidebar,.panel,.messages,.hero,.input-area{background:#1c1a24;border:1px solid rgba(255,255,255,.08);border-radius:24px}
-.sidebar{padding:16px;display:flex;flex-direction:column;gap:16px}
-.brand h1{font-size:32px}.brand p{color:#aaa}
+body{
+    background:#14121b;
+    color:#e6e0ee;
+    font-family:Arial,sans-serif;
+    height:100vh;
+    overflow:hidden;
+}
+
+.app-shell{
+    display:grid;
+    grid-template-columns:360px 1fr;
+    height:100vh;
+    padding:16px;
+    gap:16px;
+}
+
+.sidebar,
+.panel,
+.messages,
+.hero,
+.input-area{
+    background:#1c1a24;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:24px;
+}
+
+.sidebar{
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+}
+
+.brand h1{
+    font-size:32px;
+}
+
+.brand p{
+    color:#aaa;
+}
+
 .state-display{
     margin-top:10px;
     padding:10px;
@@ -13,6 +53,36 @@ body{background:#14121b;color:#e6e0ee;font-family:Arial,sans-serif;height:100vh;
     font-weight:600;
     background:rgba(255,255,255,.05);
 }
+
+.panel{
+    padding:16px;
+}
+
+/* LIVE2D AREA */
+
+.avatar-panel{
+    height:420px;
+    flex:none;
+    overflow:hidden;
+    position:relative;
+    padding:0;
+}
+
+#live2dCanvas{
+    width:100%;
+    height:100%;
+    display:block;
+}
+
+/* VISUALIZER */
+
+#visualizer{
+    width:100%;
+    height:140px;
+}
+
+/* LANGUAGE */
+
 .language-toggle{
     display:flex;
     gap:10px;
@@ -31,21 +101,103 @@ body{background:#14121b;color:#e6e0ee;font-family:Arial,sans-serif;height:100vh;
 .lang-btn.active{
     background:#947dff;
 }
-.panel{padding:16px}
-.avatar-panel{display:flex;justify-content:center;align-items:center}
-.preview-frame{width:220px;max-width:100%}
-.preview-frame svg{width:100%;display:block}
-#visualizer{width:100%;height:160px}
-.meta{display:flex;justify-content:space-between;padding:6px 0}
-.main{display:flex;flex-direction:column;gap:16px;min-height:0}
-.hero{padding:20px}
-.messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:20px}
-.message{max-width:75%;padding:14px;border-radius:16px;line-height:1.7}
-.user{align-self:flex-end;background:#947dff}
-.ai{align-self:flex-start;background:#2b2933}
-.typing{display:none;color:#aaa;padding:4px 8px}
-.input-area{display:flex;gap:12px;padding:12px}
-.input-area input{flex:1;padding:16px;border-radius:14px;border:1px solid #484555;background:#14121b;color:white}
-.input-area button{padding:16px 22px;border-radius:14px;border:none;background:#947dff;color:white;cursor:pointer}
-#recordBtn.recording{background:#93000a}
-@media(max-width:900px){.app-shell{grid-template-columns:1fr}.sidebar{order:2}.main{order:1}}
+
+/* SYSTEM PANEL */
+
+.meta{
+    display:flex;
+    justify-content:space-between;
+    padding:6px 0;
+}
+
+/* MAIN AREA */
+
+.main{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    min-height:0;
+}
+
+.hero{
+    padding:20px;
+}
+
+.messages{
+    flex:1;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    padding:20px;
+}
+
+.message{
+    max-width:75%;
+    padding:14px;
+    border-radius:16px;
+    line-height:1.7;
+}
+
+.user{
+    align-self:flex-end;
+    background:#947dff;
+}
+
+.ai{
+    align-self:flex-start;
+    background:#2b2933;
+}
+
+.typing{
+    display:none;
+    color:#aaa;
+    padding:4px 8px;
+}
+
+.input-area{
+    display:flex;
+    gap:12px;
+    padding:12px;
+}
+
+.input-area input{
+    flex:1;
+    padding:16px;
+    border-radius:14px;
+    border:1px solid #484555;
+    background:#14121b;
+    color:white;
+}
+
+.input-area button{
+    padding:16px 22px;
+    border-radius:14px;
+    border:none;
+    background:#947dff;
+    color:white;
+    cursor:pointer;
+}
+
+#recordBtn.recording{
+    background:#93000a;
+}
+
+@media(max-width:900px){
+
+    .app-shell{
+        grid-template-columns:1fr;
+    }
+
+    .sidebar{
+        order:2;
+    }
+
+    .main{
+        order:1;
+    }
+
+    .avatar-panel{
+        min-height:500px;
+    }
+}
