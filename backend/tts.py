@@ -1,49 +1,44 @@
-import os
 import requests
 
-print("ElevenLabs TTS ready.")
+print("Cartesia TTS ready.")
 
-# Put your key in environment:
-# export ELEVENLABS_API_KEY="your_key"
+API_KEY = "sk_car_otVbvKUku6Hhq1bg4EnxRA"
 
-API_KEY = "sk_9d0a2cb939781f1386b8ebb468095d2f70a44534ad46f024" 
+# Hindi-capable voice
+VOICE_ID = "f9836c6e-a0bd-460e-9d3c-f7299fa60f94"
 
-# Change to your preferred voice
-VOICE_ID = "CwhRBWXzGAHq8TQ4Fs17"  # Bella
-
-MODEL_ID = "eleven_multilingual_v2"
+MODEL_ID = "sonic-2"
 
 def generate_speech(
     text,
-    language="en",
-    output_path="response.mp3"
+    language="hi",
+    output_path="response.wav"
 ):
-
-    print(
-        f"Generating speech ({language})..."
-    )
+    print(f"Generating speech ({language})...")
 
     if not API_KEY:
-        raise ValueError(
-            "ELEVENLABS_API_KEY not set"
-        )
+        raise ValueError("CARTESIA_API_KEY not set")
 
-    url = (
-        f"https://api.elevenlabs.io/"
-        f"v1/text-to-speech/{VOICE_ID}"
-    )
+    url = "https://api.cartesia.ai/tts/bytes"
 
     headers = {
-        "xi-api-key": API_KEY,
+        "Cartesia-Version": "2025-04-16",
+        "X-API-Key": API_KEY,
         "Content-Type": "application/json"
     }
 
     payload = {
-        "text": text,
         "model_id": MODEL_ID,
-        "voice_settings": {
-            "stability": 0.5,
-            "similarity_boost": 0.75
+        "transcript": text,
+        "voice": {
+            "mode": "id",
+            "id": VOICE_ID
+        },
+        "language": language,
+        "output_format": {
+            "container": "wav",
+            "encoding": "pcm_s16le",
+            "sample_rate": 24000
         }
     }
 
@@ -56,15 +51,19 @@ def generate_speech(
 
     print("Status:", response.status_code)
 
-    response.raise_for_status()
+    if not response.ok:
+        try:
+            error_text = response.json()
+        except Exception:
+            error_text = response.text
 
-    with open(
-        output_path,
-        "wb"
-    ) as f:
+        raise RuntimeError(
+            f"Cartesia API Error {response.status_code}: {error_text}"
+        )
+
+    with open(output_path, "wb") as f:
         f.write(response.content)
 
     print("Speech generated.")
 
     return output_path
-

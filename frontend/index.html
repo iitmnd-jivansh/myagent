@@ -1,108 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MyAgent</title>
-<link rel="stylesheet" href="styles.css"/>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MyAgent</title>
+    <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
+    <div class="app-shell">
 
-<div class="app-shell">
+        <aside class="sidebar">
 
-<aside class="sidebar">
+            <div class="brand">
+                <h3>State</h3>
+                <div id="agentState" class="state-display">
+                    🟢 Idle
+                </div>
+            </div>
 
-<div class="brand">
-<h3>State</h3>
-<div id="agentState" class="state-display">
-🟢 Idle
-</div>
-</div>
+            <div class="panel avatar-panel">
+                <div id="preview" class="preview-frame"></div>
+            </div>
 
-<div class="panel avatar-panel">
-<canvas id="live2dCanvas"></canvas>
-</div>
+            <div class="panel playback-panel" style="text-align: center; padding: 10px;">
+                <button id="playbackBtn" onclick="togglePlayback()" disabled class="lang-btn" style="width: 100%;">⏸
+                    Pause</button>
+            </div>
 
-<div class="panel">
-<h3>TTS Visualizer</h3>
-<canvas id="visualizer"></canvas>
-</div>
+            <div class="panel">
+                <h3>TTS Visualizer</h3>
+                <canvas id="visualizer"></canvas>
+            </div>
 
-<div class="panel">
-<h3>System</h3>
-<div class="meta">STT <span>Whisper</span></div>
-<div class="meta">LLM <span>Llama3</span></div>
-<div class="meta">TTS <span>ElevenLabs</span></div>
-<div class="meta">Search <span>SearXNG</span></div>
-</div>
+            <div class="panel">
+                <h3>System</h3>
+                <div class="meta">STT <span>Whisper</span></div>
+                <div class="meta">LLM <span>Llama3</span></div>
+                <div class="meta">TTS <span>Cartesia TTS</span></div>
+                <div class="meta">Search <span>SearXNG</span></div>
+            </div>
 
-</aside>
+        </aside>
 
-<main class="main">
+        <main class="main">
 
-<header class="hero">
-<h2>MyAgent</h2>
-<p>Knowledge Base • Web Search • News • Weather</p>
-</header>
+            <header class="hero">
+                <h2>MyAgent</h2>
+                <p>Knowledge Base • Web Search • News • Weather</p>
+            </header>
 
-<div id="messages" class="messages">
-<div class="message ai">
-Hello. I am your local AI assistant.
-</div>
-</div>
+            <div id="messages" class="messages">
+                <div class="message ai">
+                    Hello. I am your local AI assistant.
+                </div>
+            </div>
 
-<div id="typing" class="typing">
-AI is thinking...
-</div>
+            <div id="typing" class="typing">
+                AI is thinking...
+            </div>
 
-<div class="language-toggle">
+            <div class="language-toggle">
 
-<button
-id="englishBtn"
-class="lang-btn active">
-English
-</button>
+                <button id="englishBtn" class="lang-btn active">
+                    English
+                </button>
 
-<button
-id="hindiBtn"
-class="lang-btn">
-हिन्दी
-</button>
+                <button id="hindiBtn" class="lang-btn">
+                    हिन्दी
+                </button>
 
-</div>
+            </div>
 
-<div class="input-area">
+            <div class="input-area">
 
-<button
-id="recordBtn"
-onclick="toggleRecording()">
-🎤
-</button>
+                <button id="recordBtn" onclick="toggleRecording()">
+                    🎤
+                </button>
 
-<input
-id="messageInput"
-type="text"
-placeholder="Ask something..."
-/>
+                <input id="messageInput" type="text" placeholder="Ask something..." />
 
-<button onclick="sendMessage()">
-Send
-</button>
+                <button onclick="sendMessage()">
+                    Send
+                </button>
 
-</div>
+            </div>
 
-</main>
+        </main>
 
-</div>
+    </div>
 
-<script src="Core/live2dcubismcore.min.js"></script>
-
-<script type="module"
-src="assets/index-DVG4LRbD.js">
-</script>
-
-<script src="script.js"></script>
-
+    <script src="script.js"></script>
 </body>
+
 </html>

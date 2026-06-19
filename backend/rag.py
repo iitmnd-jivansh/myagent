@@ -13,7 +13,7 @@ collection = client.get_collection(
 
 SIMILARITY_THRESHOLD = 300
 
-
+chat_history = []
 def ask_question(
     query,
     language="en"
@@ -125,14 +125,29 @@ Question:
             f"(distance={best_distance:.3f})"
         )
 
+    global chat_history
+
+    messages = []
+    for msg in chat_history:
+        messages.append(msg)
+
+    messages.append({
+        "role": "user",
+        "content": prompt
+    })
+
     response = ollama.chat(
         model="llama3",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
+        messages=messages
     )
 
-    return response["message"]["content"]
+    content = response["message"]["content"]
+
+    chat_history.append({"role": "user", "content": query})
+    chat_history.append({"role": "assistant", "content": content})
+
+    # Keep the last 10 messages (10 user + 10 assistant = 20 total)
+    if len(chat_history) > 20:
+        chat_history = chat_history[-20:]
+
+    return content

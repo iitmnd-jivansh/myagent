@@ -2,6 +2,18 @@ const messagesDiv = document.getElementById("messages");
 const input = document.getElementById("messageInput");
 const typing = document.getElementById("typing");
 const recordBtn = document.getElementById("recordBtn");
+const playbackBtn = document.getElementById("playbackBtn");
+
+let currentAudio = null;
+
+function togglePlayback() {
+  if (!currentAudio) return;
+  if (currentAudio.paused) {
+    currentAudio.play();
+  } else {
+    currentAudio.pause();
+  }
+}
 
 const canvas = document.getElementById("visualizer");
 const ctx = canvas.getContext("2d");
@@ -27,59 +39,152 @@ function clearVisualizer() {
 
 clearVisualizer();
 
-// ─── Agent state ────────────────────────────────────────────────────────────
+const MOUTHS = [
+  `<path d="M122,210 C129,206 135,207 140,209 C145,207 151,206 158,210 C151,213 140,213 129,213 Z" fill="#C06868"/>`,
+  `<ellipse cx="140" cy="212" rx="17" ry="2.5" fill="#2C0808"/>`,
+  `<path d="M122,211 Q140,213 158,211 L158,215 Q140,213 122,215 Z" fill="#2A0808"/>`,
+  `<path d="M119,208 Q140,211 161,208 L161,221 Q140,218 119,221 Z" fill="#2A0808"/>`,
+  `<ellipse cx="140" cy="213" rx="10" ry="10" fill="#2A0808"/>`,
+  `<rect x="116" y="211" width="48" height="4" rx="1.5" fill="#F2EEE8"/>`,
+  `<path d="M122,211 Q140,213 158,211 L158,215 Q140,213 122,215 Z" fill="#2A0808"/>`,
+  `<path d="M124,212 Q140,213 156,212 L156,213 Q140,214 124,213 Z" fill="#340A0A"/>`
+];
+
+function buildSVG(mi) {
+  return `
+<svg viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
+<rect width="280" height="360" fill="#BFD0E0"/>
+<path d="M-5,360 L-5,298 C16,277 50,262 90,253 L118,247 L140,253 L162,247 C210,262 244,277 285,298 L285,360 Z" fill="#222232"/>
+<path d="M120,247 L140,253 L160,247 L156,360 L124,360 Z" fill="#F2F2F2"/>
+<path d="M120,244 Q117,279 121,285 Q130,293 140,293 Q150,293 159,285 Q163,279 160,244 Q152,237 140,237 Q128,237 120,244 Z" fill="#D08860"/>
+<ellipse cx="140" cy="159" rx="73" ry="94" fill="#D49068"/>
+<path d="M70,149 Q67,114 82,86 Q108,47 140,43 Q172,47 198,86 Q213,114 210,149" fill="#180A04"/>
+<path d="M70,149 Q63,178 66,202" stroke="#160802" stroke-width="22" fill="none" stroke-linecap="round"/>
+<path d="M210,149 Q217,178 214,202" stroke="#160802" stroke-width="22" fill="none" stroke-linecap="round"/>
+<ellipse cx="112" cy="157" rx="17" ry="10" fill="#F8F5F2"/>
+<ellipse cx="168" cy="157" rx="17" ry="10" fill="#F8F5F2"/>
+<circle cx="112" cy="157" r="8" fill="#3C2512"/>
+<circle cx="168" cy="157" r="8" fill="#3C2512"/>
+<circle cx="112" cy="157" r="4" fill="#080404"/>
+<circle cx="168" cy="157" r="4" fill="#080404"/>
+${MOUTHS[mi]}
+</svg>
+`;
+}
+
+const preview = document.getElementById("preview");
+
+let currentFrame = 0;
+let talkingInterval = null;
+
+function setIdle() {
+  preview.innerHTML = buildSVG(0);
+}
 
 function setAgentState(state) {
 
-  const el = document.getElementById("agentState");
+  const el =
+    document.getElementById(
+      "agentState"
+    );
 
   if (!el) return;
 
   switch (state) {
 
     case "idle":
-      el.innerHTML = "🟢 Idle";
+      el.innerHTML =
+        "🟢 Idle";
       break;
 
     case "listening":
-      el.innerHTML = "🎤 Listening";
+      el.innerHTML =
+        "🎤 Listening";
       break;
 
     case "thinking":
-      el.innerHTML = "🧠 Thinking";
+      el.innerHTML =
+        "🧠 Thinking";
       break;
 
     case "speaking":
-      el.innerHTML = "🔊 Speaking";
+      el.innerHTML =
+        "🔊 Speaking";
       break;
   }
 }
 
+function startTalkingAnimation() {
+
+  stopTalkingAnimation();
+
+  talkingInterval = setInterval(() => {
+
+    currentFrame = (currentFrame + 1) % 8;
+
+    preview.innerHTML = buildSVG(currentFrame);
+
+  }, 120);
+}
+
+function stopTalkingAnimation() {
+
+  clearInterval(talkingInterval);
+
+  currentFrame = 0;
+
+  setIdle();
+}
+
+setIdle();
 setAgentState("idle");
 
-// ─── Language toggle ─────────────────────────────────────────────────────────
+const englishBtn =
+  document.getElementById("englishBtn");
 
-const englishBtn = document.getElementById("englishBtn");
-const hindiBtn   = document.getElementById("hindiBtn");
+const hindiBtn =
+  document.getElementById("hindiBtn");
 
 if (englishBtn && hindiBtn) {
 
-  englishBtn.addEventListener("click", () => {
-    currentLanguage = "en";
-    englishBtn.classList.add("active");
-    hindiBtn.classList.remove("active");
-    input.placeholder = "Ask something...";
-  });
+  englishBtn.addEventListener(
+    "click",
+    () => {
 
-  hindiBtn.addEventListener("click", () => {
-    currentLanguage = "hi";
-    hindiBtn.classList.add("active");
-    englishBtn.classList.remove("active");
-    input.placeholder = "कुछ पूछें...";
-  });
+      currentLanguage = "en";
+
+      englishBtn.classList.add(
+        "active"
+      );
+
+      hindiBtn.classList.remove(
+        "active"
+      );
+
+      input.placeholder =
+        "Ask something...";
+    }
+  );
+
+  hindiBtn.addEventListener(
+    "click",
+    () => {
+
+      currentLanguage = "hi";
+
+      hindiBtn.classList.add(
+        "active"
+      );
+
+      englishBtn.classList.remove(
+        "active"
+      );
+
+      input.placeholder =
+        "कुछ पूछें...";
+    }
+  );
 }
-
-// ─── Chat messages ───────────────────────────────────────────────────────────
 
 function addMessage(text, type) {
 
@@ -94,37 +199,82 @@ function addMessage(text, type) {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// ─── TTS visualizer ──────────────────────────────────────────────────────────
-
 function drawVisualizer(dataArray) {
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
 
-  const bars    = Math.max(14, Math.floor(canvas.width / 12));
-  const centerY = canvas.height / 2;
-  const spacing = canvas.width / bars;
-  const barWidth = Math.max(3, spacing * 0.65);
+  const bars = Math.max(
+    14,
+    Math.floor(canvas.width / 12)
+  );
+
+  const centerY =
+    canvas.height / 2;
+
+  const spacing =
+    canvas.width / bars;
+
+  const barWidth =
+    Math.max(
+      3,
+      spacing * 0.65
+    );
 
   ctx.fillStyle = "white";
 
-  for (let i = 0; i < bars; i++) {
+  for (
+    let i = 0;
+    i < bars;
+    i++
+  ) {
 
-    const sourceIndex = Math.floor(i * dataArray.length / bars);
-    const value       = dataArray[sourceIndex] || 0;
-    const height      = Math.max(4, value * 0.75);
-    const x           = i * spacing;
+    const sourceIndex =
+      Math.floor(
+        i *
+        dataArray.length /
+        bars
+      );
 
-    ctx.fillRect(x, centerY - height / 2, barWidth, height);
+    const value =
+      dataArray[sourceIndex] || 0;
+
+    const height =
+      Math.max(
+        4,
+        value * 0.75
+      );
+
+    const x =
+      i * spacing;
+
+    ctx.fillRect(
+      x,
+      centerY - height / 2,
+      barWidth,
+      height
+    );
   }
 }
-
-// ─── Send message ────────────────────────────────────────────────────────────
 
 async function sendMessage() {
 
   const message = input.value.trim();
 
   if (!message) return;
+
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+    if (playbackBtn) {
+      playbackBtn.disabled = true;
+      playbackBtn.textContent = "⏸ Pause";
+    }
+  }
 
   addMessage(message, "user");
 
@@ -135,11 +285,19 @@ async function sendMessage() {
 
   try {
 
-    const response = await fetch("http://127.0.0.1:8000/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, language: currentLanguage })
-    });
+    const response = await fetch(
+      "http://127.0.0.1:8000/chat",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: message,
+          language: currentLanguage
+        })
+      }
+    );
 
     const data = await response.json();
 
@@ -159,65 +317,107 @@ async function sendMessage() {
   }
 }
 
-// ─── Speak / TTS playback ────────────────────────────────────────────────────
-
 async function speakResponse(text) {
 
   try {
 
-    const response = await fetch("http://127.0.0.1:8000/speak", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text, language: currentLanguage })
-    });
+    const response = await fetch(
+      "http://127.0.0.1:8000/speak",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: text,
+          language: currentLanguage
+        })
+      }
+    );
 
     const audioBlob = await response.blob();
-    const audioUrl  = URL.createObjectURL(audioBlob);
-    const audio     = new Audio(audioUrl);
+
+    const audioUrl = URL.createObjectURL(audioBlob);
+
+    const audio = new Audio(audioUrl);
+    currentAudio = audio;
+
+    if (playbackBtn) {
+      playbackBtn.disabled = false;
+      playbackBtn.textContent = "⏸ Pause";
+    }
 
     audio.crossOrigin = "anonymous";
 
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const audioContext =
+      new (window.AudioContext ||
+        window.webkitAudioContext)();
 
     await audioContext.resume();
 
-    const analyser = audioContext.createAnalyser();
+    const analyser =
+      audioContext.createAnalyser();
+
     analyser.fftSize = 128;
 
-    const source = audioContext.createMediaElementSource(audio);
+    const source =
+      audioContext.createMediaElementSource(audio);
+
     source.connect(analyser);
+
     analyser.connect(audioContext.destination);
 
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-    // Start Kei talking animation (implemented in kei.js)
-    window.keiAvatar?.startTalking();
+    const dataArray =
+      new Uint8Array(
+        analyser.frequencyBinCount
+      );
 
     function animate() {
 
       if (audio.paused || audio.ended) {
-        clearVisualizer();
-        // Stop Kei talking animation
-        window.keiAvatar?.stopTalking();
+        if (audio.ended) {
+          clearVisualizer();
+        }
+        stopTalkingAnimation();
         return;
       }
 
       analyser.getByteFrequencyData(dataArray);
+
       drawVisualizer(dataArray);
+
       requestAnimationFrame(animate);
     }
 
     audio.onplay = () => {
+
       setAgentState("speaking");
+      if (playbackBtn) playbackBtn.textContent = "⏸ Pause";
+      startTalkingAnimation();
       animate();
     };
 
+    audio.onpause = () => {
+      if (!audio.ended) {
+        setAgentState("idle");
+        if (playbackBtn) playbackBtn.textContent = "▶ Resume";
+      }
+    };
+
     audio.onended = () => {
+
       setAgentState("idle");
+
       clearVisualizer();
-      // Stop Kei talking animation
-      window.keiAvatar?.stopTalking();
+
+      stopTalkingAnimation();
+
       audioContext.close();
+      currentAudio = null;
+      if (playbackBtn) {
+        playbackBtn.disabled = true;
+        playbackBtn.textContent = "⏸ Pause";
+      }
     };
 
     await audio.play();
@@ -225,16 +425,23 @@ async function speakResponse(text) {
   } catch (err) {
 
     setAgentState("idle");
-    clearVisualizer();
-    // Ensure animation stops on error too
-    window.keiAvatar?.stopTalking();
+
     console.error(err);
+
+    clearVisualizer();
+
+    stopTalkingAnimation();
+
+    currentAudio = null;
+    if (playbackBtn) {
+      playbackBtn.disabled = true;
+      playbackBtn.textContent = "⏸ Pause";
+    }
   }
 }
 
-// ─── Voice recording ─────────────────────────────────────────────────────────
-
 async function toggleRecording() {
+
   if (!isRecording) {
     startRecording();
   } else {
@@ -244,10 +451,22 @@ async function toggleRecording() {
 
 async function startRecording() {
 
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+    if (playbackBtn) {
+      playbackBtn.disabled = true;
+      playbackBtn.textContent = "⏸ Pause";
+    }
+  }
+
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: true
+  });
 
   mediaRecorder = new MediaRecorder(stream);
-  audioChunks   = [];
+
+  audioChunks = [];
 
   mediaRecorder.ondataavailable = event => {
     audioChunks.push(event.data);
@@ -255,19 +474,33 @@ async function startRecording() {
 
   mediaRecorder.onstop = async () => {
 
-    const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
-    const formData  = new FormData();
+    const audioBlob = new Blob(audioChunks, {
+      type: "audio/wav"
+    });
 
-    formData.append("file",     audioBlob, "recording.wav");
-    formData.append("language", currentLanguage);
+    const formData = new FormData();
+
+    formData.append(
+      "file",
+      audioBlob,
+      "recording.wav"
+    );
+
+    formData.append(
+      "language",
+      currentLanguage
+    );
 
     typing.style.display = "block";
     setAgentState("thinking");
 
-    const response = await fetch("http://127.0.0.1:8000/transcribe", {
-      method: "POST",
-      body: formData
-    });
+    const response = await fetch(
+      "http://127.0.0.1:8000/transcribe",
+      {
+        method: "POST",
+        body: formData
+      }
+    );
 
     const data = await response.json();
 
@@ -286,53 +519,17 @@ async function startRecording() {
 }
 
 function stopRecording() {
+
   mediaRecorder.stop();
+
   isRecording = false;
+
   recordBtn.classList.remove("recording");
 }
 
-// ─── Live2D / Kei initialisation ─────────────────────────────────────────────
-//
-//  avatar.js is gone.  All avatar work now lives in kei.js which exposes:
-//
-//    initializeKei()              — mounts Cubism SDK onto #live2dCanvas
-//                                   and sets window.keiAvatar
-//
-//    window.keiAvatar = {
-//      startTalking()             — lip-sync / talking expression
-//      stopTalking()              — return to idle expression
-//      setExpression(name)        — e.g. "thinking", "happy"  [TODO in kei.js]
-//    }
-//
-//  setKeiState(state) helper (defined in kei.js):
-//    setKeiState("idle")          — neutral idle motion loop
-//    setKeiState("thinking")      — thinking expression / motion
-//    setKeiState("speaking")      — driven by startTalking / stopTalking
-
-async function loadLive2D() {
-
-  // Delegate fully to kei.js once it is implemented.
-  // initializeKei() will load the model JSON, set up the Cubism renderer,
-  // run the idle motion loop, and assign window.keiAvatar.
-
-  if (typeof initializeKei === "function") {
-    await initializeKei();
-  } else {
-    console.warn(
-      "loadLive2D: initializeKei() not found — " +
-      "make sure kei.js is loaded before script.js."
-    );
-  }
-}
-
-// ─── Keyboard shortcut ───────────────────────────────────────────────────────
-
 input.addEventListener("keydown", function (event) {
+
   if (event.key === "Enter") {
     sendMessage();
   }
 });
-
-// ─── Boot ────────────────────────────────────────────────────────────────────
-
-loadLive2D();
