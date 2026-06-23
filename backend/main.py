@@ -11,7 +11,16 @@ from tts import generate_speech
 from weather import get_weather
 from news import get_news
 
+from fastapi import WebSocket
+from gemini_live import GeminiLiveSession
+
+from fastapi.responses import FileResponse
+import os
+
 app = FastAPI()
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(BASE_DIR, "..", "frontend")
 
 
 # Enable CORS
@@ -135,4 +144,45 @@ async def speak(req: ChatRequest):
         audio_path,
         media_type="audio/mpeg",
         filename="response.mp3"
+    )
+
+@app.websocket("/ws/live")
+async def websocket_live(ws: WebSocket):
+
+    await ws.accept()
+
+    session = GeminiLiveSession()
+
+    try:
+        await session.run(ws)
+    except Exception as e:
+        print(f"WebSocket closed: {e}")
+    finally:
+        await session.close()
+        try:
+            await ws.close()
+        except:
+            pass
+
+@app.get("/live.css")
+async def live_css():
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "live.css"),
+        media_type="text/css"
+    )
+
+
+@app.get("/live.js")
+async def live_js():
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "live.js"),
+        media_type="application/javascript"
+    )
+
+
+@app.get("/live")
+async def live_page():
+
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "live.html")
     )

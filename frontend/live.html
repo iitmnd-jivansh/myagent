@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyAgent Live - Realtime Voice AI</title>
+    <link rel="stylesheet" href="/live.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-elements">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+    
+    <div class="glass-container">
+        <h1>MyAgent Live</h1>
+        <p class="subtitle">Realtime Speech-to-Speech AI</p>
+
+        <div class="visualizer" id="visualizer">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+
+        <button id="connectBtn" class="btn-primary">
+            <span class="btn-text">Connect & Start Talking</span>
+            <span class="btn-icon">🎙️</span>
+        </button>
+
+        <div id="status" class="status-badge disconnected">
+            Disconnected
+        </div>
+    </div>
+
+    <script src="/live.js"></script>
+</body>
+</html>

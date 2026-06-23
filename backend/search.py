@@ -1,7 +1,8 @@
 import requests
 
 
-def search_web(query):
+def search_web(query: str) -> str:
+    """Searches the web for the given query and returns the answer."""
 
     try:
 

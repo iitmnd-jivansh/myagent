@@ -34,7 +34,8 @@ def get_coordinates(city):
     }
 
 
-def get_weather(city):
+def get_weather(city: str) -> str:
+    """Returns the current weather conditions for the specified city."""
 
     location = get_coordinates(city)
 

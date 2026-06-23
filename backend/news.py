@@ -8,9 +8,10 @@ BASE_URL = "https://gnews.io/api/v4/search"
 
 
 def get_news(
-    topic="general",
-    max_results=5
-):
+    topic: str = "general",
+    max_results: int = 5
+) -> str:
+    """Fetches the latest news articles about a specific topic."""
 
     if not GNEWS_API_KEY:
         return (

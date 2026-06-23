@@ -151,3 +151,37 @@ Question:
         chat_history = chat_history[-20:]
 
     return content
+
+def query_knowledge_base(query: str) -> str:
+    """Queries the local knowledge base for information. If no relevant info is found locally, it falls back to a web search."""
+    query_embedding_response = ollama.embeddings(
+        model="nomic-embed-text",
+        prompt=query
+    )
+    query_embedding = query_embedding_response["embedding"]
+
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=3
+    )
+
+    docs = results["documents"][0]
+    distances = results.get("distances", [[999]])[0]
+    best_distance = min(distances)
+
+    print("=" * 50)
+    print("[Live] Query:", query)
+    print("[Live] Best Distance:", best_distance)
+    print("[Live] Distances:", distances)
+    print("=" * 50)
+
+    use_kb = len(docs) > 0 and best_distance < SIMILARITY_THRESHOLD
+    if use_kb:
+        print(f"[RAG Live] Using Knowledge Base (distance={best_distance:.3f})")
+        return "\n".join(docs)
+    else:
+        print(f"[RAG Live] Falling back to SearXNG Web Search (distance={best_distance:.3f})")
+        web_answer = search_web(query)
+        if web_answer:
+            return web_answer
+        return "No relevant information found in the knowledge base or web search."
