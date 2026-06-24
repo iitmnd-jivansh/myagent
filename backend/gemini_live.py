@@ -12,7 +12,7 @@ from rag import query_knowledge_base
 MODEL = "gemini-2.5-flash-native-audio-latest"
 
 # Will pick up GEMINI_API_KEY from environment variables by default.
-client = genai.Client(api_key="AQ.Ab8RN6J6q2zVLeKzpCbAIel6WnSeKW6eTtxdcsZ5DGWCw5OXKg")
+client = genai.Client(api_key="AQ.Ab8RN6K9JkNi3osXla57RIdiBfwMr10OZsROX36x9MRHArPL9w")
 
 class GeminiLiveSession:
 
@@ -71,53 +71,54 @@ class GeminiLiveSession:
                 )
 
     async def gemini_to_browser(self, websocket):
-        async for msg in self.session.receive():
-            # print("Received message from Gemini")
-            server_content = msg.server_content
-            if server_content is not None and server_content.model_turn is not None:
-                for part in server_content.model_turn.parts:
-                    if part.inline_data and part.inline_data.data:
-                        await websocket.send_bytes(part.inline_data.data)
+        while True:
+            async for msg in self.session.receive():
+                # print("Received message from Gemini")
+                server_content = msg.server_content
+                if server_content is not None and server_content.model_turn is not None:
+                    for part in server_content.model_turn.parts:
+                        if part.inline_data and part.inline_data.data:
+                            await websocket.send_bytes(part.inline_data.data)
 
-            if msg.tool_call is not None:
-                function_responses = []
-                for call in msg.tool_call.function_calls:
-                    name = call.name
-                    args = call.args if call.args else {}
-                    print(f"Tool called: {name} with args: {args}")
-                    result = None
-                    try:
-                        if name == "get_weather":
-                            result = get_weather(**args)
-                        elif name == "search_web":
-                            result = search_web(**args)
-                        elif name == "get_news":
-                            result = get_news(**args)
-                        elif name == "query_knowledge_base":
-                            result = query_knowledge_base(**args)
-                        else:
-                            result = f"Unknown tool {name}"
-                    except Exception as e:
-                        print(f"Error executing tool {name}: {e}")
-                        result = f"Error: {e}"
+                if msg.tool_call is not None:
+                    function_responses = []
+                    for call in msg.tool_call.function_calls:
+                        name = call.name
+                        args = call.args if call.args else {}
+                        print(f"Tool called: {name} with args: {args}")
+                        result = None
+                        try:
+                            if name == "get_weather":
+                                result = get_weather(**args)
+                            elif name == "search_web":
+                                result = search_web(**args)
+                            elif name == "get_news":
+                                result = get_news(**args)
+                            elif name == "query_knowledge_base":
+                                result = query_knowledge_base(**args)
+                            else:
+                                result = f"Unknown tool {name}"
+                        except Exception as e:
+                            print(f"Error executing tool {name}: {e}")
+                            result = f"Error: {e}"
+                            
+                        if result is None:
+                            result = "No result returned."
                         
-                    if result is None:
-                        result = "No result returned."
+                        function_responses.append(
+                            types.FunctionResponse(
+                                name=name,
+                                id=call.id,
+                                response={"result": result}
+                            )
+                        )
                     
-                    function_responses.append(
-                        types.FunctionResponse(
-                            name=name,
-                            id=call.id,
-                            response={"result": result}
+                    if function_responses:
+                        await self.session.send(
+                            input=types.LiveClientToolResponse(
+                                function_responses=function_responses
+                            )
                         )
-                    )
-                
-                if function_responses:
-                    await self.session.send(
-                        input=types.LiveClientToolResponse(
-                            function_responses=function_responses
-                        )
-                    )
 
     async def close(self):
         pass
