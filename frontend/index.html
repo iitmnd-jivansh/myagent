@@ -6,6 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MyAgent</title>
     <link rel="stylesheet" href="styles.css" />
+    <!-- Import map for Three.js and VRM -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.164.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.164.0/examples/jsm/",
+                "@pixiv/three-vrm": "https://unpkg.com/@pixiv/three-vrm@3.2.0/lib/three-vrm.module.js",
+                "@pixiv/three-vrm-animation": "https://unpkg.com/@pixiv/three-vrm-animation@3.2.0/lib/three-vrm-animation.module.js"
+            }
+        }
+    </script>
 </head>
 
 <body>
@@ -21,7 +32,7 @@
             </div>
 
             <div class="panel avatar-panel">
-                <div id="preview" class="preview-frame"></div>
+                <div id="avatarContainer" class="avatar-container"></div>
             </div>
 
             <div class="panel playback-panel" style="text-align: center; padding: 10px;">
@@ -91,7 +102,7 @@
 
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 
 </html>

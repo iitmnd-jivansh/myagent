@@ -5,7 +5,7 @@ print("Cartesia TTS ready.")
 API_KEY = "sk_car_otVbvKUku6Hhq1bg4EnxRA"
 
 # Hindi-capable voice
-VOICE_ID = "f9836c6e-a0bd-460e-9d3c-f7299fa60f94"
+VOICE_ID = "86e30c1d-714b-4074-a1f2-1cb6b552fb49"
 
 MODEL_ID = "sonic-2"
 
