@@ -8,7 +8,7 @@ Local Voice AI Assistant is a hybrid conversational AI platform that combines lo
 *   **Local Large Language Models (LLMs)** (via Ollama) for text-based chat.
 *   **Real-time Streaming Voice Assistant** (via Gemini 2.5 Flash Native Audio API).
 *   **Agentic Tool Calling** (Weather, News, Knowledge Base, Web Search).
-*   **Speech-to-Text (STT) and Text-to-Speech (TTS)** (Faster Whisper, Kokoro TTS).
+*   **Speech-to-Text (STT) and Text-to-Speech (TTS)** (Faster Whisper, Cartesia TTS).
 *   **Interactive Web Chat Interface** with real-time audio visualization.
 
 The system is designed to operate with a flexible architecture: leveraging local infrastructure for privacy and cost-savings where possible, while seamlessly integrating external APIs for advanced, low-latency, real-time voice interactions.
@@ -144,7 +144,7 @@ The architecture now supports dual inference engines based on the interaction mo
 
 ### Text-to-Speech (`tts.py`)
 *   **Technology:** Kokoro TTS
-*   **Pipeline:** AI Text Response $\rightarrow$ Kokoro $\rightarrow$ `.mp3` Audio Output
+*   **Pipeline:** AI Text Response $\rightarrow$ Cartesia $\rightarrow$ `.mp3` Audio Output
 
 *(Note: The real-time `/ws/live` endpoint bypasses these local services, utilizing Gemini's native audio-in/audio-out capabilities.)*
 
