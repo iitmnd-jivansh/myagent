@@ -178,6 +178,9 @@ def query_knowledge_base(query: str) -> str:
     use_kb = len(docs) > 0 and best_distance < SIMILARITY_THRESHOLD
     if use_kb:
         print(f"[RAG Live] Using Knowledge Base (distance={best_distance:.3f})")
+        print(f"[RAG Live] Chunks loaded: {len(docs)}")
+        for i, doc in enumerate(docs):
+            print(f"[RAG Live] Chunk {i+1} Information: {doc}")
         return "\n".join(docs)
     else:
         print(f"[RAG Live] Falling back to SearXNG Web Search (distance={best_distance:.3f})")

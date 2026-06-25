@@ -25,8 +25,11 @@ def search_web(query: str) -> str:
         )
 
         if answers:
-            return answers[0]["answer"]
+            ans = answers[0]["answer"]
+            print(f"[SearXNG Live] Query: '{query}' | Information retrieved: {ans}")
+            return ans
 
+        print(f"[SearXNG Live] Query: '{query}' | No information found.")
         return None
 
     except Exception as e:
