@@ -11,7 +11,7 @@ collection = client.get_collection(
     name="knowledge_base"
 )
 
-SIMILARITY_THRESHOLD = 300
+SIMILARITY_THRESHOLD = 320
 
 chat_history = []
 def ask_question(

@@ -17,6 +17,11 @@ from gemini_live import GeminiLiveSession
 from fastapi.responses import FileResponse
 import os
 
+from dotenv import load_dotenv
+from livekit.api import AccessToken, VideoGrants
+
+load_dotenv()
+
 app = FastAPI()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -185,4 +190,61 @@ async def live_page():
 
     return FileResponse(
         os.path.join(FRONTEND_DIR, "live.html")
+    )
+
+
+# ── LiveKit Cloud Integration ──────────────────────────────────────────────
+
+class TokenRequest(BaseModel):
+    room_name: str = "myagent-room"
+    identity: str = "web-user"
+
+
+@app.post("/livekit/token")
+async def livekit_token(req: TokenRequest):
+    """Generate a LiveKit room access token for the frontend client."""
+
+    api_key = os.getenv("LIVEKIT_API_KEY")
+    api_secret = os.getenv("LIVEKIT_API_SECRET")
+    livekit_url = os.getenv("LIVEKIT_URL")
+
+    if not api_key or not api_secret or not livekit_url:
+        return {"error": "LiveKit credentials not configured in .env"}
+
+    token = (
+        AccessToken(api_key, api_secret)
+        .with_identity(req.identity)
+        .with_name(req.identity)
+        .with_grants(VideoGrants(
+            room_join=True,
+            room=req.room_name,
+        ))
+    )
+
+    return {
+        "token": token.to_jwt(),
+        "url": livekit_url,
+    }
+
+
+@app.get("/livekit_live.css")
+async def livekit_live_css():
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "livekit_live.css"),
+        media_type="text/css"
+    )
+
+
+@app.get("/livekit_live.js")
+async def livekit_live_js():
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "livekit_live.js"),
+        media_type="application/javascript"
+    )
+
+
+@app.get("/livekit-live")
+async def livekit_live_page():
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "livekit_live.html")
     )

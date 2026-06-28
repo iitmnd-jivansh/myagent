@@ -6,4 +6,5 @@ Steps to run
 5. Gemini api key will likely be expired, replace it in backend/gemini_live.py
 6. In backend folder,uvicorn main:app --reload
 7. In frontend folder, click on index.html {tested on chromium and firefox} 
-8. For the live page, run https://localhost:8000/live {tested on chromium and firefox}
+8. Run python livekit_agent.py start in seperate terminal
+9. For the live page, run http://localhost:8000/livekit-live {tested on chromium and firefox}
