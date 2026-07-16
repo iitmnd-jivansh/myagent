@@ -1,161 +1,304 @@
-const btn = document.getElementById("connectBtn");
-const statusEl = document.getElementById("status");
-const visualizer = document.getElementById("visualizer");
+/**
+ * LiveKit Live Page – Frontend Logic
+ *
+ * Connects to a LiveKit room via the livekit-client SDK (loaded from CDN).
+ * Publishes the user's microphone audio and plays back the agent's audio.
+ * Handles transcription display and audio visualization.
+ */
 
-let socket;
-let audioContext;
-let processor;
-let source;
+// ── DOM Elements ──────────────────────────────────────────────────────────
+
+const connectBtn = document.getElementById("connectBtn");
+const btnText = connectBtn.querySelector(".btn-text");
+const statusBadge = document.getElementById("statusBadge");
+const statusText = document.getElementById("statusText");
+const orbContainer = document.getElementById("orbContainer");
+const orbCore = document.getElementById("orbCore");
+const glassContainer = document.getElementById("glassContainer");
+const transcriptPanel = document.getElementById("transcriptPanel");
+const transcriptEmpty = document.getElementById("transcriptEmpty");
+
+// ── LiveKit SDK (from global UMD namespace) ───────────────────────────────
+
+const { Room, RoomEvent, Track, DisconnectReason } = LivekitClient;
+
+// ── State ─────────────────────────────────────────────────────────────────
+
+let room = null;
 let isConnected = false;
+let audioContext = null;
+let analyser = null;
+let animationId = null;
 
-// Queue timing for seamless audio playback
-let nextStartTime = 0;
+// ── Connect / Disconnect ──────────────────────────────────────────────────
 
-btn.addEventListener("click", async () => {
+connectBtn.addEventListener("click", async () => {
     if (isConnected) {
         disconnect();
         return;
     }
-
-    statusEl.textContent = "Connecting...";
-    statusEl.className = "status-badge connecting";
-
-    try {
-        socket = new WebSocket(`ws://${window.location.host}/ws/live`);
-        socket.binaryType = "arraybuffer";
-
-        socket.onopen = async () => {
-            isConnected = true;
-            statusEl.textContent = "Connected";
-            statusEl.className = "status-badge connected";
-            btn.querySelector('.btn-text').textContent = "Disconnect";
-            visualizer.classList.add("active");
-
-            if (audioContext) {
-                nextStartTime = audioContext.currentTime;
-            }
-            
-            await startMicrophone();
-        };
-
-        socket.onmessage = async (event) => {
-            playPCM(event.data);
-        };
-
-        socket.onclose = () => {
-            disconnect();
-        };
-
-        socket.onerror = (err) => {
-            console.error("WebSocket error:", err);
-            statusEl.textContent = "Error connecting";
-            statusEl.className = "status-badge disconnected";
-            disconnect();
-        };
-
-    } catch (e) {
-        console.error(e);
-        statusEl.textContent = "Error";
-        statusEl.className = "status-badge disconnected";
-    }
+    await connect();
 });
 
-function disconnect() {
-    isConnected = false;
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.close();
-    }
-    
-    if (processor) {
-        processor.disconnect();
-        processor = null;
-    }
-    
-    if (source) {
-        source.disconnect();
-        source = null;
-    }
-    
-    statusEl.textContent = "Disconnected";
-    statusEl.className = "status-badge disconnected";
-    btn.querySelector('.btn-text').textContent = "Connect & Start Talking";
-    visualizer.classList.remove("active");
-}
+async function connect() {
+    setStatus("connecting", "Connecting...");
 
-async function startMicrophone() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-                channelCount: 1,
-                sampleRate: 16000
-            }
+        // 1. Get token from our backend
+        const res = await fetch("/livekit/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                room_name: "myagent-room",
+                identity: "user-" + Math.random().toString(36).substring(2, 8),
+            }),
         });
 
-        audioContext = new (window.AudioContext || window.webkitAudioContext)({
-            sampleRate: 16000
+        const data = await res.json();
+
+        if (data.error) {
+            setStatus("disconnected", "Config Error");
+            console.error("Token error:", data.error);
+            return;
+        }
+
+        // 2. Create and configure the Room
+        room = new Room({
+            adaptiveStream: true,
+            dynacast: true,
+            audioCaptureDefaults: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+            },
         });
-        
-        nextStartTime = audioContext.currentTime;
 
-        source = audioContext.createMediaStreamSource(stream);
-        processor = audioContext.createScriptProcessor(4096, 1, 1);
+        // 3. Set up event handlers
+        setupRoomEvents(room);
 
-        source.connect(processor);
-        processor.connect(audioContext.destination);
+        // 4. Connect to LiveKit
+        await room.connect(data.url, data.token);
 
-        processor.onaudioprocess = (event) => {
-            if (!isConnected || socket.readyState !== WebSocket.OPEN) return;
+        // 5. Publish microphone
+        await room.localParticipant.setMicrophoneEnabled(true);
 
-            const input = event.inputBuffer.getChannelData(0);
-            const pcm = convertFloat32ToInt16(input);
+        // 6. Update UI
+        isConnected = true;
+        setStatus("connected", "Connected");
+        connectBtn.classList.add("connected");
+        btnText.textContent = "Disconnect";
+        orbContainer.classList.add("active");
+        glassContainer.classList.add("active");
 
-            // Using the same JSON structure as before to remain compatible with backend logic
-            socket.send(
-                JSON.stringify({
-                    type: "audio",
-                    data: Array.from(new Uint8Array(pcm.buffer))
-                })
-            );
-        };
-    } catch (e) {
-        console.error("Microphone access denied or error:", e);
+        // 7. Start audio context for visualization
+        setupAudioContext();
+
+    } catch (err) {
+        console.error("Connection failed:", err);
+        setStatus("disconnected", "Connection Failed");
         disconnect();
     }
 }
 
-function convertFloat32ToInt16(buffer) {
-    const l = buffer.length;
-    const out = new Int16Array(l);
-    for (let i = 0; i < l; i++) {
-        let s = Math.max(-1, Math.min(1, buffer[i]));
-        out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+function disconnect() {
+    if (room) {
+        room.disconnect();
+        room = null;
     }
-    return out;
+
+    isConnected = false;
+    setStatus("disconnected", "Disconnected");
+    connectBtn.classList.remove("connected");
+    btnText.textContent = "Connect & Talk";
+    orbContainer.classList.remove("active", "speaking");
+    glassContainer.classList.remove("active");
+
+    // Stop visualization
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+    if (audioContext) {
+        audioContext.close().catch(() => {});
+        audioContext = null;
+        analyser = null;
+    }
 }
 
-function playPCM(arrayBuffer) {
-    if (!audioContext) return;
+// ── Room Event Handlers ───────────────────────────────────────────────────
 
-    const int16 = new Int16Array(arrayBuffer);
-    const float32 = new Float32Array(int16.length);
+function setupRoomEvents(room) {
+    // Agent audio track subscribed → play it and visualize
+    room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+        if (track.kind === Track.Kind.Audio) {
+            console.log(`Audio track subscribed from: ${participant.identity}`);
 
-    for (let i = 0; i < int16.length; i++) {
-        float32[i] = int16[i] / 32768;
+            // Attach the audio element to the DOM for playback
+            const audioEl = track.attach();
+            audioEl.id = "agent-audio-" + participant.identity;
+            audioEl.style.display = "none";
+            document.body.appendChild(audioEl);
+
+            // Set up visualization for agent audio
+            connectAnalyser(audioEl);
+
+            // Visual feedback: agent is speaking
+            orbContainer.classList.add("speaking");
+        }
+    });
+
+    // Agent audio track unsubscribed → cleanup
+    room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+        if (track.kind === Track.Kind.Audio) {
+            const elements = track.detach();
+            elements.forEach((el) => el.remove());
+            orbContainer.classList.remove("speaking");
+        }
+    });
+
+    // Active speaker changes → visual feedback
+    room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
+        const agentSpeaking = speakers.some(
+            (s) => s.identity !== room.localParticipant.identity
+        );
+        if (agentSpeaking) {
+            orbContainer.classList.add("speaking");
+        } else {
+            orbContainer.classList.remove("speaking");
+        }
+    });
+
+    // Data messages (e.g. transcriptions from agent)
+    room.on(RoomEvent.DataReceived, (payload, participant, kind, topic) => {
+        try {
+            const decoder = new TextDecoder();
+            const text = decoder.decode(payload);
+            const msg = JSON.parse(text);
+
+            if (msg.type === "transcription" || msg.type === "transcript") {
+                addTranscript(msg.role || "agent", msg.text || msg.content || "");
+            }
+        } catch (e) {
+            // Not JSON or not a transcription, ignore
+        }
+    });
+
+    // Transcription events from LiveKit's built-in transcription system
+    room.on(RoomEvent.TranscriptionReceived, (segments, participant) => {
+        for (const segment of segments) {
+            if (segment.final) {
+                const role = participant.identity === room.localParticipant.identity
+                    ? "user"
+                    : "agent";
+                addTranscript(role, segment.text);
+            }
+        }
+    });
+
+    // Participant disconnected
+    room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+        console.log(`Participant disconnected: ${participant.identity}`);
+        // Cleanup any audio elements
+        const audioEl = document.getElementById("agent-audio-" + participant.identity);
+        if (audioEl) audioEl.remove();
+    });
+
+    // Room disconnected
+    room.on(RoomEvent.Disconnected, (reason) => {
+        console.log("Room disconnected:", reason);
+        disconnect();
+    });
+
+    // Connection quality feedback
+    room.on(RoomEvent.ConnectionQualityChanged, (quality, participant) => {
+        if (participant.identity === room.localParticipant.identity) {
+            console.log("Connection quality:", quality);
+        }
+    });
+}
+
+// ── Audio Visualization ───────────────────────────────────────────────────
+
+function setupAudioContext() {
+    if (audioContext) return;
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioContext.resume();
+}
+
+function connectAnalyser(audioElement) {
+    if (!audioContext) setupAudioContext();
+
+    try {
+        const source = audioContext.createMediaElementSource(audioElement);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 64;
+        analyser.smoothingTimeConstant = 0.8;
+
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+
+        startVisualization();
+    } catch (e) {
+        console.warn("Could not set up audio analyser:", e);
+    }
+}
+
+function startVisualization() {
+    if (!analyser) return;
+
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    function animate() {
+        animationId = requestAnimationFrame(animate);
+
+        analyser.getByteFrequencyData(dataArray);
+
+        // Calculate average volume
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+        }
+        const avg = sum / dataArray.length;
+        const normalizedVolume = Math.min(avg / 128, 1);
+
+        // Scale the orb based on volume
+        const scale = 1 + normalizedVolume * 0.3;
+        const glow = 30 + normalizedVolume * 50;
+        orbCore.style.transform = `scale(${scale})`;
+        orbCore.style.boxShadow = `0 0 ${glow}px rgba(139, 92, 246, ${0.3 + normalizedVolume * 0.4})`;
     }
 
-    // Gemini Live audio is returned at 24kHz
-    const buffer = audioContext.createBuffer(1, float32.length, 24000);
-    buffer.getChannelData(0).set(float32);
+    animate();
+}
 
-    const src = audioContext.createBufferSource();
-    src.buffer = buffer;
-    src.connect(audioContext.destination);
+// ── Transcript Panel ──────────────────────────────────────────────────────
 
-    // Queue audio to prevent overlap
-    if (nextStartTime < audioContext.currentTime) {
-        nextStartTime = audioContext.currentTime;
+function addTranscript(role, text) {
+    if (!text || text.trim() === "") return;
+
+    // Remove empty state message
+    if (transcriptEmpty) {
+        transcriptEmpty.style.display = "none";
     }
 
-    src.start(nextStartTime);
-    nextStartTime += buffer.duration;
+    const entry = document.createElement("div");
+    entry.className = `transcript-entry ${role}`;
+    entry.textContent = text;
+    transcriptPanel.appendChild(entry);
+
+    // Auto-scroll to bottom
+    transcriptPanel.scrollTop = transcriptPanel.scrollHeight;
+
+    // Keep transcript manageable (max 50 entries)
+    const entries = transcriptPanel.querySelectorAll(".transcript-entry");
+    if (entries.length > 50) {
+        entries[0].remove();
+    }
+}
+
+// ── Status Helper ─────────────────────────────────────────────────────────
+
+function setStatus(state, text) {
+    statusBadge.className = `status-badge ${state}`;
+    statusText.textContent = text;
 }

@@ -12,14 +12,23 @@ def get_news(
     max_results: int = 5
 ) -> str:
     """Fetches the latest news articles about a specific topic."""
+    print("=" * 50)
+    print(f"[NEWS] News lookup request")
+    print(f"[NEWS]   Topic: '{topic}'")
+    print(f"[NEWS]   Max results: {max_results}")
+    print("=" * 50)
 
     if not GNEWS_API_KEY:
+        print(f"[NEWS] ❌ GNEWS_API_KEY not set!")
         return (
             "GNEWS_API_KEY environment "
             "variable not set."
         )
 
     try:
+        print(f"[NEWS]   Calling GNews API...")
+        print(f"[NEWS]   URL: {BASE_URL}")
+        print(f"[NEWS]   Params: q='{topic}', lang=en, max={max_results}")
 
         r = requests.get(
             BASE_URL,
@@ -32,6 +41,8 @@ def get_news(
             timeout=15
         )
 
+        print(f"[NEWS]   GNews API response status: {r.status_code}")
+
         r.raise_for_status()
 
         data = r.json()
@@ -41,7 +52,12 @@ def get_news(
             []
         )
 
+        article_count = len(articles)
+        print(f"[NEWS]   Articles found: {article_count}")
+
         if not articles:
+            print(f"[NEWS]   No articles found for topic '{topic}'.")
+            print("=" * 50)
             return (
                 f"No news found for "
                 f"'{topic}'."
@@ -55,16 +71,16 @@ def get_news(
             articles,
             start=1
         ):
+            title = article.get("title", "")
+            description = article.get("description", "")
+            source = article.get("source", {}).get("name", "Unknown")
+            published = article.get("publishedAt", "Unknown")
 
-            title = article.get(
-                "title",
-                ""
-            )
-
-            description = article.get(
-                "description",
-                ""
-            )
+            print(f"[NEWS]   Article {i}:")
+            print(f"[NEWS]     Title: {title}")
+            print(f"[NEWS]     Source: {source}")
+            print(f"[NEWS]     Published: {published}")
+            print(f"[NEWS]     Description: {description[:100]}...")
 
             output.append(
                 f"""
@@ -74,10 +90,14 @@ def get_news(
 """
             )
 
+        print(f"[NEWS] ✅ Successfully retrieved {article_count} articles for '{topic}'")
+        print("=" * 50)
+
         return "\n".join(output)
 
     except Exception as e:
-
+        print(f"[NEWS] ❌ News lookup failed with error: {e}")
+        print("=" * 50)
         return (
             f"News lookup failed: "
             f"{str(e)}"

@@ -1,4 +1,5 @@
 import { avatar } from './avatar/avatar.js';
+import { checkHealth, sendChatMessage, generateSpeech, transcribeAudio } from './api.js';
 
 const messagesDiv = document.getElementById("messages");
 const input = document.getElementById("messageInput");
@@ -139,8 +140,117 @@ function addMessage(text, type) {
   messagesDiv.appendChild(div);
 
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+  return div;
 }
 
+// ── GenUI Card Renderers ────────────────────────────────────────────────────
+
+function renderGenUICard(uiData) {
+  if (!uiData || !uiData.type) return;
+
+  switch (uiData.type) {
+    case "weather_card":
+      renderWeatherCard(uiData);
+      break;
+    case "news_list":
+      renderNewsList(uiData);
+      break;
+    case "answer_panel":
+      renderAnswerPanel(uiData);
+      break;
+    default:
+      // Unknown type — fall back to a minimal summary card
+      renderAnswerPanel(uiData);
+      break;
+  }
+}
+
+function renderWeatherCard(ui) {
+  const card = document.createElement("div");
+  card.className = "genui-card";
+
+  let html = '<div class="genui-card-header">';
+  html += `<div class="genui-card-title">${escapeHtml(ui.title || "Weather")}</div>`;
+  if (ui.subtitle) {
+    html += `<div class="genui-card-subtitle">${escapeHtml(ui.subtitle)}</div>`;
+  }
+  html += '</div>';
+  html += '<div class="genui-card-body"><div class="weather-fields">';
+
+  if (ui.fields && Array.isArray(ui.fields)) {
+    for (const field of ui.fields) {
+      html += '<div class="weather-field">';
+      html += `<span class="weather-field-label">${escapeHtml(field.label || "")}</span>`;
+      html += `<span class="weather-field-value">${escapeHtml(field.value || "")}</span>`;
+      html += '</div>';
+    }
+  }
+
+  html += '</div></div>';
+  card.innerHTML = html;
+  messagesDiv.appendChild(card);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function renderNewsList(ui) {
+  const card = document.createElement("div");
+  card.className = "genui-card";
+
+  let html = '<div class="genui-card-header">';
+  html += `<div class="genui-card-title">${escapeHtml(ui.title || "News")}</div>`;
+  html += '</div>';
+  html += '<div class="genui-card-body"><div class="news-items">';
+
+  if (ui.items && Array.isArray(ui.items)) {
+    for (const item of ui.items) {
+      html += '<div class="news-item">';
+      html += `<div class="news-item-title">${escapeHtml(item.title || "")}</div>`;
+      if (item.description) {
+        html += `<div class="news-item-desc">${escapeHtml(item.description)}</div>`;
+      }
+      html += '</div>';
+    }
+  }
+
+  html += '</div></div>';
+  card.innerHTML = html;
+  messagesDiv.appendChild(card);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function renderAnswerPanel(ui) {
+  const card = document.createElement("div");
+  card.className = "genui-card";
+
+  let icon = "💬";
+  if (ui.type === "answer_panel") {
+    icon = "🧠";
+  }
+
+  let html = '<div class="genui-card-body"><div class="answer-panel">';
+  html += `<div class="answer-panel-icon">${icon}</div>`;
+  html += '<div class="answer-panel-content">';
+
+  if (ui.title) {
+    html += `<div class="genui-card-title" style="margin-bottom:6px;">${escapeHtml(ui.title)}</div>`;
+  }
+  if (ui.summary) {
+    html += `<div class="answer-panel-summary">${escapeHtml(ui.summary)}</div>`;
+  }
+
+  html += '</div></div></div>';
+  card.innerHTML = html;
+  messagesDiv.appendChild(card);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function escapeHtml(str) {
+  if (typeof str !== "string") return "";
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
 function drawVisualizer(dataArray) {
 
   ctx.clearRect(
@@ -227,25 +337,16 @@ async function sendMessage() {
 
   try {
 
-    const response = await fetch(
-      "http://127.0.0.1:8000/chat",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: message,
-          language: currentLanguage
-        })
-      }
-    );
-
-    const data = await response.json();
+    const data = await sendChatMessage(message, currentLanguage);
 
     typing.style.display = "none";
 
     addMessage(data.response, "ai");
+
+    // Render GenUI card if present in response
+    if (data.ui) {
+      renderGenUICard(data.ui);
+    }
 
     speakResponse(data.response);
 
@@ -263,21 +364,7 @@ async function speakResponse(text) {
 
   try {
 
-    const response = await fetch(
-      "http://127.0.0.1:8000/speak",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: text,
-          language: currentLanguage
-        })
-      }
-    );
-
-    const audioBlob = await response.blob();
+    const audioBlob = await generateSpeech(text, currentLanguage);
 
     const audioUrl = URL.createObjectURL(audioBlob);
 
@@ -425,35 +512,20 @@ async function startRecording() {
       type: "audio/wav"
     });
 
-    const formData = new FormData();
-
-    formData.append(
-      "file",
-      audioBlob,
-      "recording.wav"
-    );
-
-    formData.append(
-      "language",
-      currentLanguage
-    );
-
     typing.style.display = "block";
     setAgentState("thinking");
 
-    const response = await fetch(
-      "http://127.0.0.1:8000/transcribe",
-      {
-        method: "POST",
-        body: formData
-      }
-    );
+    try {
+      const data = await transcribeAudio(audioBlob, currentLanguage);
 
-    const data = await response.json();
+      typing.style.display = "none";
 
-    typing.style.display = "none";
-
-    input.value = data.text;
+      input.value = data.text;
+    } catch (error) {
+      typing.style.display = "none";
+      console.error("Transcription failed:", error);
+      addMessage("Could not transcribe audio.", "ai");
+    }
   };
 
   mediaRecorder.start();
@@ -480,6 +552,17 @@ input.addEventListener("keydown", function (event) {
     sendMessage();
   }
 });
+
+// Check backend health on startup
+(async function init() {
+  try {
+    const health = await checkHealth();
+    console.log("Backend connected:", health);
+    addMessage(`System ready. Connected to ${health.services.llm} backend.`, "ai");
+  } catch (err) {
+    console.warn("Backend not reachable on startup:", err.message);
+  }
+})();
 
 // Expose functions to window for HTML event handlers
 window.togglePlayback = togglePlayback;
