@@ -6,12 +6,13 @@ The project is built around a simple idea: every user request should travel thro
 
 The main capabilities are:
 
-- Text chat with automatic routing to weather, news, RAG, search, or knowledge-base tools.
+- Text chat with automatic routing to weather, news, RAG, search, UI generation, or knowledge-base tools.
 - Speech-to-text input through the `/transcribe` endpoint.
 - Text-to-speech output through the `/speak` endpoint.
 - A local ChromaDB knowledge base with Ollama embeddings.
 - Web fallback through the configured search integration when local knowledge is not enough.
-- Structured GenUI responses for weather cards, news lists, and answer panels.
+- Structured GenUI responses for weather cards, news lists, UI previews, and answer panels.
+- LLM-powered UI code generator that produces complete HTML pages from natural language prompts (via Groq API).
 - Official MCP server support over Streamable HTTP and stdio-compatible transports.
 - A LiveKit Cloud voice page and standalone LiveKit agent worker for real-time audio conversations.
 - A 3D avatar frontend with speech playback visualization and lip-sync hooks.
@@ -65,6 +66,8 @@ Important routes:
 | `/speak` | POST | Text-to-speech MP3 response |
 | `/mcp` | GET/POST/DELETE | Official MCP Streamable HTTP endpoint |
 | `/mcp-status` | GET | MCP availability and advertised tools |
+| `/api/generate-ui` | POST | Generate HTML UI from natural language prompt via Groq |
+| `/uigen` | GET | Dedicated UI generator page |
 | `/live` | GET | LiveKit voice frontend |
 | `/livekit/token` | POST | LiveKit access-token generation |
 
@@ -116,17 +119,18 @@ This registry pattern keeps routing, metadata, execution, and tool discovery in 
 
 ### Registered Tools
 
-The router currently registers five tools:
+The router currently registers six tools:
 
 | Tool | Purpose | Trigger |
 | --- | --- | --- |
+| `ui_gen` | Generate a complete HTML UI from a natural language prompt via Groq LLM | Chat messages containing `create`, `build`, `make`, `generate`, or `design` |
 | `weather` | Fetch current weather for a city | Chat messages containing `weather` |
 | `news` | Fetch latest news for a topic | Chat messages containing `news` |
 | `search` | Run direct SearXNG web search | Direct route or tool call |
 | `knowledge` | Query the local ChromaDB knowledge base with web fallback | Direct route or tool call |
 | `rag` | General assistant answer flow | Default chat route |
 
-The chat router intentionally checks weather before news. This preserves the previous priority where weather-specific questions should not be swallowed by broader general chat handling.
+The `ui_gen` tool is checked first (before weather and news) so that prompts like "create a login page" are routed to the code generator rather than falling through to other tools. The chat router then intentionally checks weather before news. This preserves the previous priority where weather-specific questions should not be swallowed by broader general chat handling.
 
 ### Chat Routing Flow
 
@@ -207,6 +211,10 @@ Supported UI types:
 | --- | --- | --- |
 | `weather_card` | `weather` | `renderWeatherCard()` |
 | `news_list` | `news` | `renderNewsList()` |
+| `ui_preview` | `ui_gen` | `renderUIPreview()` |
+| `search_card` | `search` | `renderSearchCard()` |
+| `knowledge_card` | `knowledge` | `renderKnowledgeCard()` |
+| `rag_card` | `rag` | `renderRagCard()` |
 | `answer_panel` | all other integrations | `renderAnswerPanel()` |
 
 ### Weather Card
@@ -291,6 +299,105 @@ After sending a message to `/api/chat`, the frontend:
 5. Appends the generated card to the message stream.
 
 The frontend also escapes rendered strings with `escapeHtml()` before inserting UI content, which prevents raw response text from becoming executable HTML.
+
+## UI Generator (Codegen)
+
+The UI generator lets you create complete, self-contained HTML pages from natural language descriptions using the Groq API (`llama-3.3-70b-versatile`). It operates through two parallel paths and supports both a dedicated page and inline chat previews.
+
+### Backend Code Generator
+
+The core generator lives in:
+
+```bash
+backend/codegen.py
+```
+
+The function `generate_ui(prompt)`:
+
+1. Takes a natural language prompt like `"create a login page with purple theme"`.
+2. Calls Groq's `llama-3.3-70b-versatile` model with a strict system prompt that instructs the LLM to output only raw HTML (no markdown fences, no commentary).
+3. Sanitizes the output: strips any markdown code fences the LLM might have included.
+4. Validates that the output starts with `<!DOCTYPE` or `<html`; wraps it in an error page otherwise.
+
+### Dedicated Endpoint
+
+```text
+POST /api/generate-ui
+Content-Type: application/json
+
+{ "prompt": "a weather dashboard with temperature, humidity, and wind" }
+```
+
+Response:
+
+```json
+{
+  "html": "<!DOCTYPE html>...",
+  "title": "Weather Dashboard",
+  "filename": "1784637783.html"
+}
+```
+
+The endpoint also saves the generated HTML file to `frontend/generated/` with a timestamp-based filename so the file is accessible via the static file server at `generated/{filename}.html`.
+
+### Integration Router Registration
+
+The `ui_gen` tool is registered in the router registry (see [The Integration Router](#the-integration-router)) with these keywords: `create`, `build`, `make`, `generate`, `design`. It is checked before weather and news so that prompts like `"make a calculator"` are routed to the code generator.
+
+When triggered through the chat router, `_execute_ui_gen_tool()` in `backend/integrations/router.py`:
+
+1. Calls `generate_ui(prompt)` to produce the HTML.
+2. Saves the file to `frontend/generated/`.
+3. Extracts the `<title>` tag for display.
+4. Returns an `IntegrationResult` with integration type `ui_gen` and metadata containing the HTML, title, and filename.
+
+### GenUI Preview Card
+
+The GenUI `ui_preview` type (`_build_ui_preview()` in `backend/genui.py`) constructs a payload with the full HTML and filename. The frontend `renderUIPreview()` function in `frontend/script.js` renders this as:
+
+- An iframe showing the live generated UI.
+- An "Open in new tab" link pointing to `generated/{filename}.html`.
+- The iframe is created programmatically and `srcdoc` is set via a direct JavaScript property assignment (not HTML attribute injection), which avoids encoding issues with complex generated HTML.
+
+### Dedicated UI Generator Page
+
+A standalone page is available at:
+
+```text
+http://127.0.0.1:8000/uigen
+```
+
+Files:
+
+```bash
+frontend/uigen.html
+frontend/uigen.js
+```
+
+Features:
+
+- A textarea to enter prompts with Ctrl+Enter shortcut.
+- An iframe preview showing the result.
+- "Open in new tab" and "Copy HTML" buttons.
+- History sidebar stored in `localStorage` (last 20 generations).
+- Loads the most recently generated UI on page load.
+
+### Two Ways To Generate
+
+| Method | URL | How |
+|--------|-----|-----|
+| Main chat | `http://127.0.0.1:8000/` | Type `"create a login page"` — inline iframe preview in chat |
+| Dedicated page | `http://127.0.0.1:8000/uigen` | Full page with history, copy, open-in-new-tab |
+
+### Generated File Storage
+
+All generated HTML files are saved to:
+
+```bash
+frontend/generated/{timestamp}.html
+```
+
+This directory is served by the FastAPI static file mount at `/`, so generated files are available at `http://127.0.0.1:8000/generated/{filename}.html`.
 
 ## Official MCP Support
 
@@ -646,6 +753,7 @@ Other integration modules may require their own provider-specific configuration 
 ```text
 backend/
   main.py                     FastAPI app and route wiring
+  codegen.py                  LLM-powered HTML UI generator (via Groq API)
   integrations/router.py      Tool registry, chat routing, normalized integration execution
   genui.py                    Structured UI response builder
   mcp_runtime.py              Official MCP server registration/runtime
@@ -664,6 +772,9 @@ backend/
 frontend/
   index.html                  Main assistant UI
   script.js                   Main chat, GenUI, audio, avatar behavior
+  uigen.html                  Dedicated UI generator page
+  uigen.js                    UI generator frontend logic
+  generated/                  Generated HTML files from UI generator
   api.js                      Browser API client
   styles.css                  Main frontend styling
   live.html                   LiveKit voice UI
