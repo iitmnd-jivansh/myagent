@@ -156,8 +156,20 @@ function renderGenUICard(uiData) {
     case "news_list":
       renderNewsList(uiData);
       break;
+    case "search_card":
+      renderSearchCard(uiData);
+      break;
+    case "knowledge_card":
+      renderKnowledgeCard(uiData);
+      break;
+    case "rag_card":
+      renderRagCard(uiData);
+      break;
     case "answer_panel":
       renderAnswerPanel(uiData);
+      break;
+    case "ui_preview":
+      renderUIPreview(uiData);
       break;
     default:
       // Unknown type — fall back to a minimal summary card
@@ -219,6 +231,66 @@ function renderNewsList(ui) {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
+function renderSearchCard(ui) {
+  const card = document.createElement("div");
+  card.className = "genui-card";
+
+  let html = '<div class="genui-card-header">';
+  html += '<div class="genui-card-header-row">';
+  html += '<span class="genui-card-icon">🌐</span>';
+  html += `<div class="genui-card-title">${escapeHtml(ui.title || "Web Search")}</div>`;
+  html += '</div>';
+  if (ui.subtitle) {
+    html += `<div class="genui-card-subtitle">${escapeHtml(ui.subtitle)}</div>`;
+  }
+  html += '</div>';
+  html += '<div class="genui-card-body">';
+  html += `<div class="genui-card-response">${escapeHtml(ui.response || ui.summary || "")}</div>`;
+  html += '</div>';
+  card.innerHTML = html;
+  messagesDiv.appendChild(card);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function renderKnowledgeCard(ui) {
+  const card = document.createElement("div");
+  card.className = "genui-card";
+
+  let html = '<div class="genui-card-header">';
+  html += '<div class="genui-card-header-row">';
+  html += '<span class="genui-card-icon">📚</span>';
+  html += `<div class="genui-card-title">${escapeHtml(ui.title || "Knowledge Base")}</div>`;
+  html += '</div>';
+  if (ui.subtitle) {
+    html += `<div class="genui-card-subtitle">${escapeHtml(ui.subtitle)}</div>`;
+  }
+  html += '</div>';
+  html += '<div class="genui-card-body">';
+  html += `<div class="genui-card-response">${escapeHtml(ui.response || ui.summary || "")}</div>`;
+  html += '</div>';
+  card.innerHTML = html;
+  messagesDiv.appendChild(card);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function renderRagCard(ui) {
+  const card = document.createElement("div");
+  card.className = "genui-card";
+
+  let html = '<div class="genui-card-header">';
+  html += '<div class="genui-card-header-row">';
+  html += '<span class="genui-card-icon">🧠</span>';
+  html += `<div class="genui-card-title">${escapeHtml(ui.title || "Assistant")}</div>`;
+  html += '</div>';
+  html += '</div>';
+  html += '<div class="genui-card-body">';
+  html += `<div class="genui-card-response">${escapeHtml(ui.response || ui.summary || "")}</div>`;
+  html += '</div>';
+  card.innerHTML = html;
+  messagesDiv.appendChild(card);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
 function renderAnswerPanel(ui) {
   const card = document.createElement("div");
   card.className = "genui-card";
@@ -241,6 +313,49 @@ function renderAnswerPanel(ui) {
 
   html += '</div></div></div>';
   card.innerHTML = html;
+  messagesDiv.appendChild(card);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function renderUIPreview(ui) {
+  const card = document.createElement("div");
+  card.className = "genui-card";
+
+  // Build header HTML safely
+  let headerHtml = '<div class="genui-card-header">';
+  headerHtml += `<div class="genui-card-title">🎨 ${escapeHtml(ui.title || "Generated UI")}</div>`;
+  headerHtml += '</div>';
+
+  // Build body container HTML (but NOT the iframe — we'll create that directly)
+  let bodyHtml = '<div class="genui-card-body">';
+  bodyHtml += '<div class="ui-preview-container">';
+  // iframe placeholder — we insert a div and replace it with a real iframe element later
+  bodyHtml += '<div id="ui-preview-placeholder"></div>';
+  bodyHtml += '</div>';
+
+  if (ui.filename) {
+    const fileUrl = `generated/${ui.filename}`;
+    bodyHtml += `<div style="margin-top:10px;text-align:center;">`;
+    bodyHtml += `<a href="${fileUrl}" target="_blank" class="ui-open-btn" style="display:inline-block;padding:10px 20px;background:#947dff;color:white;text-decoration:none;border-radius:12px;">↗ Open in new tab</a>`;
+    bodyHtml += `</div>`;
+  }
+  bodyHtml += '</div>';
+
+  card.innerHTML = headerHtml + bodyHtml;
+
+  // Create the iframe element programmatically and set srcdoc via JS property
+  const iframe = document.createElement('iframe');
+  iframe.className = 'ui-preview-iframe';
+  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+  // Direct JS property assignment — avoids HTML attribute encoding issues
+  iframe.srcdoc = ui.html || '';
+
+  // Replace the placeholder div with the real iframe
+  const placeholder = card.querySelector('#ui-preview-placeholder');
+  if (placeholder && placeholder.parentNode) {
+    placeholder.parentNode.replaceChild(iframe, placeholder);
+  }
+
   messagesDiv.appendChild(card);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }

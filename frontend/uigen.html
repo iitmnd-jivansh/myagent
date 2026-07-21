@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UI Generator - MyAgent</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="uigen-body">
+    <div class="uigen-header">
+        <h1>🎨 UI Generator</h1>
+        <a href="/">← Back to Chat</a>
+    </div>
+
+    <div class="uigen-main">
+        <div class="uigen-left">
+            <div class="uigen-input-area">
+                <textarea id="promptInput" placeholder="Describe the UI you want to create... e.g. 'Create a login page with email and password fields, with a purple theme'" rows="3"></textarea>
+                <button id="generateBtn" onclick="generateUI()">Generate</button>
+            </div>
+
+            <div id="loadingIndicator" class="uigen-loading" style="display:none;">
+                🧠 Generating UI with Groq LLM...
+            </div>
+
+            <div class="uigen-preview">
+                <div class="uigen-preview-header">
+                    <span id="previewTitle">Preview</span>
+                    <div>
+                        <button id="openNewTabBtn" onclick="openInNewTab()" style="display:none;padding:6px 14px;border-radius:8px;border:none;background:#947dff;color:white;cursor:pointer;font-size:12px;margin-right:8px;">↗ Open in new tab</button>
+                        <button id="copyBtn" onclick="copyHTML()" style="display:none;padding:6px 14px;border-radius:8px;border:none;background:#2b2933;color:white;cursor:pointer;font-size:12px;">📋 Copy HTML</button>
+                    </div>
+                </div>
+                <iframe id="previewFrame" class="uigen-preview-iframe" sandbox="allow-scripts allow-same-origin"></iframe>
+            </div>
+        </div>
+
+        <div class="uigen-sidebar">
+            <h3>History</h3>
+            <div id="historyList">
+                <p style="color:#666;font-size:12px;">No generated UIs yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="uigen.js"></script>
+</body>
+</html>

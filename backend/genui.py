@@ -58,12 +58,51 @@ def _build_news_list(response: str, metadata: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _build_answer_panel(integration: str, response: str) -> dict[str, Any]:
+def _build_search_card(response: str, metadata: dict[str, Any]) -> dict[str, Any]:
+    """Build a rich search result card with query context and full response."""
     return {
         "version": "genui.v1",
-        "type": "answer_panel",
-        "title": integration.replace("_", " ").title(),
-        "summary": response[:240],
+        "type": "search_card",
+        "title": "Web Search",
+        "subtitle": metadata.get("query", ""),
+        "response": response,
+        "summary": response[:300],
+    }
+
+
+def _build_knowledge_card(response: str, metadata: dict[str, Any]) -> dict[str, Any]:
+    """Build a knowledge base card showing source (KB vs web fallback) and full response."""
+    return {
+        "version": "genui.v1",
+        "type": "knowledge_card",
+        "title": "Knowledge Base",
+        "subtitle": metadata.get("query", ""),
+        "response": response,
+        "summary": response[:300],
+    }
+
+
+def _build_rag_card(response: str, metadata: dict[str, Any]) -> dict[str, Any]:
+    """Build a rich RAG assistant card with full response and language context."""
+    return {
+        "version": "genui.v1",
+        "type": "rag_card",
+        "title": "Assistant",
+        "response": response,
+        "summary": response[:300],
+        "language": metadata.get("language", "en"),
+    }
+
+
+def _build_ui_preview(response: str, metadata: dict[str, Any]) -> dict[str, Any]:
+    """Build a UI preview card with an iframe showing the generated HTML."""
+    return {
+        "version": "genui.v1",
+        "type": "ui_preview",
+        "title": metadata.get("title", "Generated UI"),
+        "html": metadata.get("html", ""),
+        "filename": metadata.get("filename", ""),
+        "summary": response,
     }
 
 
@@ -83,8 +122,22 @@ def build_genui_response(
         ui = _build_weather_card(response, metadata)
     elif integration == "news":
         ui = _build_news_list(response, metadata)
+    elif integration == "search":
+        ui = _build_search_card(response, metadata)
+    elif integration == "knowledge":
+        ui = _build_knowledge_card(response, metadata)
+    elif integration == "rag":
+        ui = _build_rag_card(response, metadata)
+    elif integration == "ui_gen":
+        ui = _build_ui_preview(response, metadata)
     else:
-        ui = _build_answer_panel(integration, response)
+        # Fallback for unknown integrations
+        ui = {
+            "version": "genui.v1",
+            "type": "answer_panel",
+            "title": integration.replace("_", " ").title(),
+            "summary": response[:240],
+        }
 
     print(f"[GENUI]   UI type: {ui['type']}")
     print("=" * 60)

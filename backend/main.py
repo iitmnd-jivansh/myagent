@@ -1,4 +1,5 @@
 import os
+import time
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from stt import transcribe_audio
 from tts import generate_speech
 from genui import build_genui_response
+from codegen import generate_ui as codegen_ui
 
 from integrations import (
     execute_chat_request,
@@ -105,26 +107,20 @@ if mcp_asgi_app is not None:
 else:
     print("=" * 60)
     print("[API] Official MCP SDK not installed; /mcp is unavailable")
-    print("[API] Install with: pip install -r backend/requirements.txt")
+    print("[API] Install with: pip install mcp")
     print("=" * 60)
 
-
-@app.api_route("/mcp", methods=["GET", "POST", "DELETE"])
-async def mcp_missing_dependency():
-    """Helpful fallback when the official MCP SDK is not installed."""
-    if mcp_asgi_app is not None:
+    @app.api_route("/mcp", methods=["GET", "POST", "DELETE"])
+    async def mcp_missing_dependency():
+        """Helpful fallback when the official MCP SDK is not installed."""
+        print("=" * 60)
+        print("[API] /mcp — Official MCP SDK missing")
+        print("=" * 60)
         return {
-            "error": "MCP route is mounted but fallback handler was reached."
+            "error": "Official MCP SDK is not installed.",
+            "install": "pip install mcp",
+            "status": "missing_dependency",
         }
-
-    print("=" * 60)
-    print("[API] /mcp — Official MCP SDK missing")
-    print("=" * 60)
-    return {
-        "error": "Official MCP SDK is not installed.",
-        "install": "pip install -r backend/requirements.txt",
-        "status": "missing_dependency",
-    }
 
 
 @app.get("/mcp-status")
@@ -316,6 +312,78 @@ async def speak(req: ChatRequest):
         media_type="audio/mpeg",
         filename="response.mp3"
     )
+
+# ── UI Generator ──────────────────────────────────────────────────────────
+
+class GenerateUIRequest(BaseModel):
+    prompt: str
+
+
+GENERATED_DIR = os.path.join(FRONTEND_DIR, "generated")
+os.makedirs(GENERATED_DIR, exist_ok=True)
+
+
+@app.post("/api/generate-ui")
+async def generate_ui(req: GenerateUIRequest):
+    """Generate a complete HTML UI from a natural language prompt using Groq."""
+    print("=" * 60)
+    print(f"[API] POST /api/generate-ui — Request received")
+    print(f"[API]   Prompt: '{req.prompt}'")
+    print("=" * 60)
+
+    html = codegen_ui(req.prompt)
+
+    # Save to generated directory
+    timestamp = int(time.time())
+    filename = f"{timestamp}.html"
+    filepath = os.path.join(GENERATED_DIR, filename)
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print(f"[API]   Saved to: {filepath}")
+    print(f"[API] POST /api/generate-ui — Response sent")
+
+    # Extract a title from the HTML
+    title = "Generated UI"
+    for line in html.splitlines():
+        line = line.strip()
+        if line.startswith("<title>") and line.endswith("</title>"):
+            title = line[7:-8]
+            break
+
+    return {
+        "html": html,
+        "title": title,
+        "filename": filename,
+    }
+
+
+@app.get("/uigen")
+async def ui_generator_page():
+    """Serve the UI generator page."""
+    print(f"[API] GET /uigen — Serving UI generator page")
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "uigen.html")
+    )
+
+
+@app.get("/uigen.js")
+async def ui_generator_js():
+    print(f"[API] GET /uigen.js — Serving static file")
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "uigen.js"),
+        media_type="application/javascript"
+    )
+
+
+@app.get("/uigen.css")
+async def ui_generator_css():
+    print(f"[API] GET /uigen.css — Serving static file")
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "uigen.css"),
+        media_type="text/css"
+    )
+
 
 @app.get("/live.css")
 async def live_css():

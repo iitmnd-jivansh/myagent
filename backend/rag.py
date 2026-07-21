@@ -135,7 +135,7 @@ Question:
     print(f"[RAG]   Total messages sent to LLM: {len(messages)}")
 
     # Step 5: Call Ollama LLM
-    model_name = "alibayram/smollm3"
+    model_name = "qwen3.5:4b"
     print(f"[RAG]   Step 5/6: Calling Ollama model '{model_name}'...")
     print(f"[RAG]   Prompt length: {len(prompt)} chars")
     print(f"[RAG]   Waiting for LLM response...")
