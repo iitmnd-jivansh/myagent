@@ -1,12 +1,12 @@
 import os
 import time
+from typing import Any, Optional
 
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import UploadFile, File, Form, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from stt import transcribe_audio
 from tts import generate_speech
@@ -22,6 +22,22 @@ from integrations import (
     list_tools,
 )
 from mcp_runtime import create_streamable_http_app
+from database import (
+    init_db,
+    create_conversation,
+    list_conversations,
+    get_conversation,
+    delete_conversation,
+    add_message,
+    get_messages,
+    add_generated_ui,
+    list_generated_uis,
+    get_cached_response,
+    set_cached_response,
+    get_preference,
+    set_preference,
+    get_all_preferences,
+)
 
 from dotenv import load_dotenv
 from livekit.api import AccessToken, VideoGrants
@@ -34,6 +50,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "..", "frontend")
 
 mcp_asgi_app = create_streamable_http_app()
+
+# Initialize database at startup
+init_db()
 
 
 # Enable CORS
@@ -144,6 +163,9 @@ async def mcp_status():
 
 # ── Chat ────────────────────────────────────────────────────────────────────
 
+# Default conversation ID for the main chat page (auto-created on first use)
+_default_conversation_id: Optional[int] = None
+
 
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
@@ -154,11 +176,29 @@ async def chat(req: ChatRequest):
     print(f"[API]   Language: '{req.language}'")
     print("=" * 60)
 
+    # Use a default conversation for the main chat page
+    global _default_conversation_id
+    if _default_conversation_id is None:
+        _default_conversation_id = create_conversation(title="Main Chat")
+        print(f"[API]   Created default conversation #{_default_conversation_id}")
+
+    # Save user message
+    add_message(_default_conversation_id, "user", req.message, language=req.language)
+
     print(f"[API]   Delegating to agent tool router...")
     result = execute_chat_request(req.message, req.language)
     print(f"[API]   Integration completed: {result.integration}")
     print(f"[API]   Response length: {len(result.response)} chars")
     print(f"[API]   Response preview: {result.response[:120]}...")
+
+    # Save assistant message
+    add_message(
+        _default_conversation_id, "assistant", result.response,
+        language=req.language,
+        tool_used=result.integration,
+        metadata={"integration": result.integration, **result.metadata},
+    )
+
     ui = build_genui_response(
         result.integration,
         result.response,
@@ -177,12 +217,27 @@ async def chat(req: ChatRequest):
 
 @app.get("/api/weather")
 async def weather(city: str = Query("Delhi", description="City name")):
-    """Get current weather for a city."""
+    """Get current weather for a city (with DB cache)."""
     print("=" * 60)
     print(f"[API] GET /api/weather — Request received")
     print(f"[API]   Query param — city='{city}'")
     print("=" * 60)
+
+    # Try cache first
+    cache_key = f"weather:{city.lower()}"
+    cached = get_cached_response("weather", cache_key)
+    if cached:
+        print(f"[API]   ✅ Using cached weather data for '{city}'")
+        return {
+            "city": city,
+            "response": cached,
+            "cached": True,
+        }
+
     result = execute_weather_lookup(city)
+    # Cache the result (5 min TTL)
+    set_cached_response("weather", cache_key, result.response, ttl=300)
+
     ui = build_genui_response(result.integration, result.response, result.metadata)
     print(f"[API]   Weather data fetched for '{city}': {result.response[:80]}...")
     print(f"[API]   GenUI type: {ui['type']}")
@@ -199,12 +254,27 @@ async def weather(city: str = Query("Delhi", description="City name")):
 
 @app.get("/api/news")
 async def news(topic: str = Query("india", description="News topic")):
-    """Get latest news for a topic."""
+    """Get latest news for a topic (with DB cache)."""
     print("=" * 60)
     print(f"[API] GET /api/news — Request received")
     print(f"[API]   Query param — topic='{topic}'")
     print("=" * 60)
+
+    # Try cache first
+    cache_key = f"news:{topic.lower()}"
+    cached = get_cached_response("news", cache_key)
+    if cached:
+        print(f"[API]   ✅ Using cached news data for '{topic}'")
+        return {
+            "topic": topic,
+            "response": cached,
+            "cached": True,
+        }
+
     result = execute_news_lookup(topic)
+    # Cache the result (5 min TTL)
+    set_cached_response("news", cache_key, result.response, ttl=300)
+
     ui = build_genui_response(result.integration, result.response, result.metadata)
     print(f"[API]   News data fetched for '{topic}': {len(result.response)} chars")
     print(f"[API]   GenUI type: {ui['type']}")
@@ -221,12 +291,28 @@ async def news(topic: str = Query("india", description="News topic")):
 
 @app.post("/api/search")
 async def web_search(req: SearchRequest):
-    """Search the web using SearXNG."""
+    """Search the web using SearXNG (with DB cache)."""
     print("=" * 60)
     print(f"[API] POST /api/search — Request received")
     print(f"[API]   Query: '{req.query}'")
     print("=" * 60)
+
+    # Try cache first
+    cache_key = f"search:{req.query.lower().strip()}"
+    cached = get_cached_response("search", cache_key)
+    if cached:
+        print(f"[API]   ✅ Using cached search result for '{req.query}'")
+        return {
+            "query": req.query,
+            "response": cached,
+            "cached": True,
+        }
+
     result = execute_search_query(req.query)
+    # Cache the result (5 min TTL)
+    if result.response:
+        set_cached_response("search", cache_key, result.response, ttl=300)
+
     ui = build_genui_response(result.integration, result.response, result.metadata)
     print(f"[API]   Search result: {result.response[:120] if result.response else 'None'}")
     print(f"[API]   GenUI type: {ui['type']}")
@@ -341,7 +427,6 @@ async def generate_ui(req: GenerateUIRequest):
         f.write(html)
 
     print(f"[API]   Saved to: {filepath}")
-    print(f"[API] POST /api/generate-ui — Response sent")
 
     # Extract a title from the HTML
     title = "Generated UI"
@@ -350,6 +435,11 @@ async def generate_ui(req: GenerateUIRequest):
         if line.startswith("<title>") and line.endswith("</title>"):
             title = line[7:-8]
             break
+
+    # Record in database
+    html_hash = str(hash(html))
+    add_generated_ui(req.prompt, title, filename, html_hash)
+    print(f"[API] POST /api/generate-ui — Response sent")
 
     return {
         "html": html,
@@ -409,6 +499,139 @@ async def live_page():
     return FileResponse(
         os.path.join(FRONTEND_DIR, "live.html")
     )
+
+
+# ── Database-Enhanced Chat ─────────────────────────────────────────────────
+
+class ChatRequestWithConversation(BaseModel):
+    message: str
+    language: str = "en"
+    conversation_id: Optional[int] = None
+
+
+@app.post("/api/v2/chat")
+async def chat_v2(req: ChatRequestWithConversation):
+    """Send a message with conversation persistence."""
+    print("=" * 60)
+    print(f"[API] POST /api/v2/chat — Request received")
+    print(f"[API]   Message: '{req.message}'")
+    print(f"[API]   Language: '{req.language}'")
+    print(f"[API]   Conversation ID: {req.conversation_id}")
+    print("=" * 60)
+
+    # Create or reuse conversation
+    conv_id = req.conversation_id
+    if conv_id is None:
+        title = req.message[:50] + ("..." if len(req.message) > 50 else "")
+        conv_id = create_conversation(title=title)
+        print(f"[API]   Created new conversation #{conv_id}")
+    else:
+        existing = get_conversation(conv_id)
+        if not existing:
+            return {"error": f"Conversation #{conv_id} not found"}, 404
+        print(f"[API]   Using existing conversation #{conv_id}")
+
+    # Save user message
+    add_message(conv_id, "user", req.message, language=req.language)
+
+    # Execute the agent
+    result = execute_chat_request(req.message, req.language)
+
+    # Save assistant message
+    add_message(
+        conv_id, "assistant", result.response,
+        language=req.language,
+        tool_used=result.integration,
+        metadata={"integration": result.integration, **result.metadata},
+    )
+
+    ui = build_genui_response(
+        result.integration,
+        result.response,
+        result.metadata,
+    )
+
+    print(f"[API] POST /api/v2/chat — Response sent (conv #{conv_id})")
+    return {
+        "conversation_id": conv_id,
+        "response": result.response,
+        "ui": ui,
+    }
+
+
+@app.get("/api/conversations")
+async def get_conversations(limit: int = 20, offset: int = 0):
+    """List all conversations."""
+    conversations = list_conversations(limit=limit, offset=offset)
+    return {"conversations": conversations}
+
+
+@app.get("/api/conversations/{conversation_id}")
+async def get_conversation_messages(conversation_id: int, limit: int = 50, offset: int = 0):
+    """Get messages for a conversation."""
+    conv = get_conversation(conversation_id)
+    if not conv:
+        return {"error": f"Conversation #{conversation_id} not found"}, 404
+    messages = get_messages(conversation_id, limit=limit, offset=offset)
+    return {"conversation": conv, "messages": messages}
+
+
+@app.delete("/api/conversations/{conversation_id}")
+async def remove_conversation(conversation_id: int):
+    """Delete a conversation and its messages."""
+    deleted = delete_conversation(conversation_id)
+    if not deleted:
+        return {"error": f"Conversation #{conversation_id} not found"}, 404
+    return {"status": "deleted", "conversation_id": conversation_id}
+
+
+# ── Generated UI History ──────────────────────────────────────────────────
+
+
+@app.get("/api/generated-uis")
+async def get_generated_uis(limit: int = 20, offset: int = 0):
+    """List all generated UIs."""
+    uis = list_generated_uis(limit=limit, offset=offset)
+    return {"generated_uis": uis}
+
+
+# ── User Preferences ──────────────────────────────────────────────────────
+
+
+class PreferenceRequest(BaseModel):
+    key: str
+    value: Any = None
+
+
+@app.get("/api/preferences")
+async def get_preferences():
+    """Get all user preferences."""
+    return {"preferences": get_all_preferences()}
+
+
+@app.get("/api/preferences/{key}")
+async def get_preference_by_key(key: str):
+    """Get a specific user preference."""
+    value = get_preference(key)
+    return {"key": key, "value": value}
+
+
+@app.post("/api/preferences")
+async def update_preference(req: PreferenceRequest):
+    """Set a user preference."""
+    set_preference(req.key, req.value)
+    return {"status": "saved", "key": req.key, "value": req.value}
+
+
+# ── API Cache Management ──────────────────────────────────────────────────
+
+
+@app.delete("/api/cache/{service}")
+async def clear_cache(service: str):
+    """Clear cached responses for a service (weather, news, search)."""
+    from database import clear_cache_for_service
+    clear_cache_for_service(service)
+    return {"status": "cleared", "service": service}
 
 
 # ── LiveKit Cloud Integration ──────────────────────────────────────────────
@@ -496,6 +719,15 @@ def print_startup_banner():
     print("║  POST   /speak              — Text-to-speech (Cartesia)     ║")
     print("║  GET    /live               — LiveKit voice frontend page   ║")
     print("║  POST   /livekit/token      — Generate LiveKit token        ║")
+    print("║  ————————————————— Database Routes ——————————————————        ║")
+    print("║  POST   /api/v2/chat         — Persistent chat (v2)         ║")
+    print("║  GET    /api/conversations   — List conversations           ║")
+    print("║  GET    /api/conversations/ — Get conversation messages    ║")
+    print("║  DELETE /api/conversations/ — Delete a conversation        ║")
+    print("║  GET    /api/generated-uis   — List generated UIs           ║")
+    print("║  GET    /api/preferences     — Get all preferences          ║")
+    print("║  POST   /api/preferences     — Set a preference             ║")
+    print("║  DELETE /api/cache/{service} — Clear API cache              ║")
     print("║                                                            ║")
     print("║  Services:                                                  ║")
     print("║    STT : Whisper (faster-whisper)                           ║")

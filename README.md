@@ -808,3 +808,83 @@ To add a new backend tool:
 7. Expose the tool in `backend/mcp_runtime.py` if MCP clients should be able to call it.
 
 This keeps each feature available through the same clean surfaces: REST, chat routing, GenUI, and MCP.
+
+## Database Persistence
+
+MyAgent now includes a built-in SQLite database (`backend/myagent.db`) for persistent storage — zero extra dependencies required.
+
+### Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `conversations` | Chat sessions with title & timestamps |
+| `messages` | Individual messages linked to conversations |
+| `generated_uis` | History of generated UIs (prompt, title, filename) |
+| `api_cache` | Time-based cache for external API responses (5 min TTL) |
+| `user_preferences` | Key-value store for user settings |
+
+### Database API Endpoints
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| POST | `/api/v2/chat` | Persistent chat with conversation tracking |
+| GET | `/api/conversations` | List conversations (paginated) |
+| GET | `/api/conversations/{id}` | Get messages for a conversation |
+| DELETE | `/api/conversations/{id}` | Delete a conversation and its messages |
+| GET | `/api/generated-uis` | List generated UI history |
+| GET | `/api/preferences` | Get all user preferences |
+| GET | `/api/preferences/{key}` | Get a specific preference |
+| POST | `/api/preferences` | Set a preference |
+| DELETE | `/api/cache/{service}` | Clear API cache for a service (weather/news/search) |
+
+### Persistent Chat
+
+The original `/api/chat` endpoint remains unchanged. A new endpoint `/api/v2/chat` adds conversation persistence:
+
+```
+POST /api/v2/chat  {"message": "Hello", "conversation_id": null}
+→ Returns { "conversation_id": 1, "response": "...", "ui": {...} }
+
+POST /api/v2/chat  {"message": "Follow up", "conversation_id": 1}
+→ Continues conversation #1
+```
+
+If `conversation_id` is omitted, a new conversation is auto-created using the first message as the title.
+
+### API Response Caching
+
+The following endpoints now cache responses in the database with a 5-minute TTL:
+
+- `GET /api/weather?city=...`
+- `GET /api/news?topic=...`
+- `POST /api/search`
+
+They return `"cached": true` when serving from cache. The cache can be cleared per-service via `DELETE /api/cache/{service}`.
+
+### UI Generation History
+
+The `/api/generate-ui` endpoint now records each generation in the database (prompt, title, filename, hash). The history is accessible via `GET /api/generated-uis`.
+
+### User Preferences
+
+Preferences are stored as JSON values and managed through:
+
+```
+GET  /api/preferences        — Get all preferences
+GET  /api/preferences/{key}  — Get a specific preference
+POST /api/preferences        — Set a preference  {"key": "...", "value": ...}
+```
+
+Example: storing the user's language preference:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/preferences \
+  -H "Content-Type: application/json" \
+  -d '{"key": "language", "value": "hi"}'
+```
+
+### Related Files
+
+```text
+backend/database.py            Database module (models, queries, caching)
+```
