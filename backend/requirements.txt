@@ -1,77 +1,50 @@
-aiofiles==25.1.0
-aiohappyeyeballs==2.7.1
-aiohttp==3.14.1
-aiosignal==1.4.0
-annotated-doc==0.0.4
-annotated-types==0.7.0
-anyio==4.14.2
-attrs==26.1.0
-av==18.0.0
-blis==1.3.3
-catalogue==2.0.10
-certifi==2026.6.17
-charset-normalizer==3.4.9
-click==8.4.2
-cloudpathlib==0.24.0
-confection==1.3.3
-ctranslate2==4.8.1
-cymem==2.0.13
-dotenv==0.9.9
-fastapi==0.139.2
-faster-whisper==1.2.1
-filelock==3.30.2
-flatbuffers==25.12.19
-frozenlist==1.8.0
-fsspec==2026.6.0
-h11==0.16.0
-hf-xet==1.5.2
-httpcore==1.0.9
-httpx==0.28.1
-huggingface_hub==1.24.0
-idna==3.18
-Jinja2==3.1.6
-livekit==1.1.13
-mcp>=1.6.0
-livekit-api==1.2.0
-livekit-protocol==1.1.19
-markdown-it-py==4.2.0
-MarkupSafe==3.0.3
-mdurl==0.1.2
-multidict==6.7.1
-murmurhash==1.0.15
-numpy==2.5.1
-onnxruntime==1.27.0
-packaging==26.2
-preshed==3.0.13
-propcache==0.5.2
-protobuf==7.35.1
-pydantic==2.13.4
-pydantic_core==2.46.4
-Pygments==2.20.0
-PyJWT==2.13.0
-python-dotenv==1.2.2
-python-multipart==0.0.32
-PyYAML==6.0.3
-requests==2.34.2
-rich==15.0.0
-setuptools==83.0.0
-shellingham==1.5.4
-smart_open==8.0.1
-spacy==3.8.13
-spacy-legacy==3.0.12
-spacy-loggers==1.0.5
-srsly==2.5.3
-starlette==1.3.1
-thinc==8.3.13
-tokenizers==0.23.1
-tqdm==4.68.4
-typer==0.27.0
-types-protobuf==7.34.1.20260518
-typing-inspection==0.4.2
-typing_extensions==4.16.0
-urllib3==2.7.0
-uvicorn==0.51.0
-wasabi==1.1.3
-weasel==1.0.0
-wrapt==2.2.2
-yarl==1.24.2
+# ── Core ──
+fastapi>=0.100.0
+uvicorn[standard]
+python-dotenv
+
+# ── Database ──
+supabase>=2.0.0
+
+# ── AI / LLM ──
+ollama
+google-genai>=0.3.0
+groq>=0.8.0
+
+# ── Knowledge Base (ChromaDB) ──
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+
+# ── Speech ──
+faster-whisper>=1.0.0
+cartesia>=1.0.0
+
+# ── Search ──
+httpx
+beautifulsoup4
+lxml
+
+# ── MCP ──
+mcp>=1.0.0
+
+# ── Media ──
+pydub
+soundfile
+numpy
+
+# ── LiveKit ──
+livekit>=0.10.0
+livekit-api>=0.10.0
+
+# ── ML ──
+torch
+torchvision
+torchaudio
+accelerate
+
+# ── UI Gen ──
+Pillow
+
+# ── Auth ──
+passlib[bcrypt]
+pyjwt

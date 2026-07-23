@@ -1,8 +1,13 @@
 import os
+import sys
 import time
 from typing import Any, Optional
 
-from fastapi import FastAPI, UploadFile, File, Form, Query
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+from fastapi import FastAPI, UploadFile, File, Form, Query, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -25,7 +30,9 @@ from mcp_runtime import create_streamable_http_app
 from database import (
     init_db,
     create_conversation,
+    create_conversation_for_user,
     list_conversations,
+    list_conversations_for_user,
     get_conversation,
     delete_conversation,
     add_message,
@@ -37,10 +44,23 @@ from database import (
     get_preference,
     set_preference,
     get_all_preferences,
+    create_user,
+    get_user_by_username,
+    get_user_by_id,
+    update_conversation_title,
+    get_last_message_preview,
 )
 
 from dotenv import load_dotenv
 from livekit.api import AccessToken, VideoGrants
+
+from auth import (
+    hash_password,
+    verify_password,
+    create_token,
+    get_current_user,
+    require_current_user,
+)
 
 load_dotenv()
 
@@ -510,20 +530,34 @@ class ChatRequestWithConversation(BaseModel):
 
 
 @app.post("/api/v2/chat")
-async def chat_v2(req: ChatRequestWithConversation):
-    """Send a message with conversation persistence."""
+async def chat_v2(
+    req: ChatRequestWithConversation,
+    user: Optional[dict] = Depends(get_current_user),
+):
+    """Send a message with conversation persistence.
+    
+    Supports authenticated users (creates user-scoped conversations)
+    and anonymous users (creates global conversations).
+    """
     print("=" * 60)
     print(f"[API] POST /api/v2/chat — Request received")
     print(f"[API]   Message: '{req.message}'")
     print(f"[API]   Language: '{req.language}'")
     print(f"[API]   Conversation ID: {req.conversation_id}")
+    print(f"[API]   Authenticated: {user is not None}")
     print("=" * 60)
 
     # Create or reuse conversation
     conv_id = req.conversation_id
     if conv_id is None:
         title = req.message[:50] + ("..." if len(req.message) > 50 else "")
-        conv_id = create_conversation(title=title)
+        if user:
+            conv_id = create_conversation_for_user(
+                user_id=user["user_id"],
+                title=title,
+            )
+        else:
+            conv_id = create_conversation(title=title)
         print(f"[API]   Created new conversation #{conv_id}")
     else:
         existing = get_conversation(conv_id)
@@ -545,29 +579,53 @@ async def chat_v2(req: ChatRequestWithConversation):
         metadata={"integration": result.integration, **result.metadata},
     )
 
+    # Update title from first message if still default
+    existing = get_conversation(conv_id)
+    if existing and existing.get("title", "").startswith("New Conversation"):
+        new_title = req.message[:50] + ("..." if len(req.message) > 50 else "")
+        update_conversation_title(conv_id, new_title)
+
     ui = build_genui_response(
         result.integration,
         result.response,
         result.metadata,
     )
 
+    # Get conversation info
+    conv = get_conversation(conv_id)
+    last_preview = get_last_message_preview(conv_id)
+
     print(f"[API] POST /api/v2/chat — Response sent (conv #{conv_id})")
     return {
         "conversation_id": conv_id,
+        "conversation": conv,
+        "last_preview": last_preview,
         "response": result.response,
         "ui": ui,
     }
 
 
 @app.get("/api/conversations")
-async def get_conversations(limit: int = 20, offset: int = 0):
-    """List all conversations."""
-    conversations = list_conversations(limit=limit, offset=offset)
+async def get_conversations(
+    limit: int = 20,
+    offset: int = 0,
+    user: Optional[dict] = Depends(get_current_user),
+):
+    """List conversations. Filters by user if authenticated, otherwise returns all."""
+    if user:
+        conversations = list_conversations_for_user(user["user_id"], limit=limit, offset=offset)
+    else:
+        conversations = list_conversations(limit=limit, offset=offset)
     return {"conversations": conversations}
 
 
 @app.get("/api/conversations/{conversation_id}")
-async def get_conversation_messages(conversation_id: int, limit: int = 50, offset: int = 0):
+async def get_conversation_messages(
+    conversation_id: int,
+    limit: int = 50,
+    offset: int = 0,
+    user: Optional[dict] = Depends(get_current_user),
+):
     """Get messages for a conversation."""
     conv = get_conversation(conversation_id)
     if not conv:
@@ -583,6 +641,21 @@ async def remove_conversation(conversation_id: int):
     if not deleted:
         return {"error": f"Conversation #{conversation_id} not found"}, 404
     return {"status": "deleted", "conversation_id": conversation_id}
+
+
+class UpdateConversationTitleRequest(BaseModel):
+    title: str
+
+
+@app.patch("/api/conversations/{conversation_id}")
+async def update_conversation_title(conversation_id: int, req: UpdateConversationTitleRequest):
+    """Update a conversation's title."""
+    conv = get_conversation(conversation_id)
+    if not conv:
+        return {"error": f"Conversation #{conversation_id} not found"}, 404
+    from database import update_conversation_title as _update_title
+    _update_title(conversation_id, req.title)
+    return {"status": "ok", "conversation_id": conversation_id, "title": req.title}
 
 
 # ── Generated UI History ──────────────────────────────────────────────────
@@ -632,6 +705,120 @@ async def clear_cache(service: str):
     from database import clear_cache_for_service
     clear_cache_for_service(service)
     return {"status": "cleared", "service": service}
+
+
+# ── Authentication ─────────────────────────────────────────────────────────
+
+
+class AuthSignUpRequest(BaseModel):
+    username: str
+    password: str
+    display_name: str = ""
+
+
+class AuthSignInRequest(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/api/auth/signup")
+async def signup(req: AuthSignUpRequest):
+    """Register a new user with username and password."""
+    print("=" * 60)
+    print(f"[API] POST /api/auth/signup — Request received")
+    print(f"[API]   Username: '{req.username}'")
+    print("=" * 60)
+
+    # Validate inputs
+    if len(req.username.strip()) < 3:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username must be at least 3 characters")
+    if len(req.password) < 4:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password must be at least 4 characters")
+
+    # Check if username exists
+    existing = get_user_by_username(req.username.strip())
+    if existing:
+        print(f"[API]   Username '{req.username}' already exists")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
+
+    # Create user
+    try:
+        password_hash = hash_password(req.password)
+        display_name = req.display_name.strip() or req.username.strip()
+        user_id = create_user(
+            username=req.username.strip(),
+            password_hash=password_hash,
+            display_name=display_name,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
+
+    # Generate JWT
+    token = create_token(user_id, req.username.strip())
+
+    print(f"[API]   User #{user_id} '{req.username}' created successfully")
+    print(f"[API] POST /api/auth/signup — Response sent")
+    return {
+        "user": {
+            "id": user_id,
+            "username": req.username.strip(),
+            "display_name": display_name,
+        },
+        "token": token,
+    }
+
+
+@app.post("/api/auth/signin")
+async def signin(req: AuthSignInRequest):
+    """Sign in with username and password."""
+    print("=" * 60)
+    print(f"[API] POST /api/auth/signin — Request received")
+    print(f"[API]   Username: '{req.username}'")
+    print("=" * 60)
+
+    # Look up user
+    user = get_user_by_username(req.username.strip())
+    if not user:
+        print(f"[API]   User '{req.username}' not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
+
+    # Verify password
+    if not verify_password(req.password, user["password_hash"]):
+        print(f"[API]   Invalid password for '{req.username}'")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
+
+    # Generate JWT
+    token = create_token(user["id"], user["username"])
+
+    print(f"[API]   User #{user['id']} '{user['username']}' signed in")
+    print(f"[API] POST /api/auth/signin — Response sent")
+    return {
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "display_name": user["display_name"],
+        },
+        "token": token,
+    }
+
+
+@app.get("/api/auth/me")
+async def get_me(user: Optional[dict] = Depends(get_current_user)):
+    """Get the current authenticated user's profile."""
+    if not user:
+        return {"authenticated": False}
+    full_user = get_user_by_id(user["user_id"])
+    if not full_user:
+        return {"authenticated": False}
+    return {
+        "authenticated": True,
+        "user": {
+            "id": full_user["id"],
+            "username": full_user["username"],
+            "display_name": full_user["display_name"],
+            "created_at": full_user["created_at"],
+        },
+    }
 
 
 # ── LiveKit Cloud Integration ──────────────────────────────────────────────

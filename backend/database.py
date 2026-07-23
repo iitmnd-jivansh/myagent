@@ -7,7 +7,9 @@ Provides persistent storage for:
   - External API response cache (weather, news, search)
   - User preferences
 
-Uses SQLite via Python's built-in sqlite3 module — zero extra dependencies.
+Dual-mode architecture:
+  - When SUPABASE_URL and SUPABASE_SERVICE_KEY are set in .env, uses Supabase (PostgreSQL).
+  - Otherwise falls back to local SQLite via Python's built-in sqlite3 module.
 """
 
 import os
@@ -15,8 +17,16 @@ import sqlite3
 import json
 import time
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from typing import Any, Optional
 
+from dotenv import load_dotenv
+
+from supabase_client import get_supabase, is_supabase_enabled
+
+load_dotenv()
+
+# ── SQLite Configuration (fallback) ──────────────────────────────
 DB_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(DB_DIR, "myagent.db")
 
@@ -44,8 +54,31 @@ def get_db():
         conn.close()
 
 
+def _utcnow():
+    """Return current UTC timestamp as ISO string for Supabase."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+# ────────────────────────────────────────────────────────────────
+# Initialization
+# ────────────────────────────────────────────────────────────────
+
+
 def init_db():
-    """Create all tables if they don't exist."""
+    """Initialize the database.
+
+    Always creates the local SQLite tables, even when Supabase is enabled,
+    because user auth (create_user / get_user_by_username / get_user_by_id)
+    is SQLite-only and has no Supabase equivalent. Skipping this step when
+    Supabase is enabled left the `users` table missing, causing
+    'no such table: users' on every signin/signup.
+    """
+    if is_supabase_enabled():
+        print("[DB] Using Supabase PostgreSQL backend for conversations/messages")
+        print("[DB] (users table is always local SQLite — initializing it too)")
+
+    # Local SQLite is always initialized — required for auth regardless of
+    # whether Supabase is used for conversations/messages/etc.
     with get_db() as conn:
         conn.executescript("""
             -- ── Conversations ──────────────────────────────────────────────
@@ -98,6 +131,15 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_api_cache_expires
                 ON api_cache(expires_at);
 
+            -- ── Users ─────────────────────────────────────────────────────
+            CREATE TABLE IF NOT EXISTS users (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                username        TEXT    NOT NULL UNIQUE,
+                display_name    TEXT    NOT NULL DEFAULT '',
+                password_hash   TEXT    NOT NULL,
+                created_at      REAL    NOT NULL DEFAULT (unixepoch())
+            );
+
             -- ── User Preferences ──────────────────────────────────────────
             CREATE TABLE IF NOT EXISTS user_preferences (
                 key   TEXT PRIMARY KEY,
@@ -105,7 +147,15 @@ def init_db():
             );
         """)
 
-        print(f"[DB] Database initialized at {DB_PATH}")
+        # Safe migration: add user_id to conversations if it doesn't exist
+        try:
+            conn.execute("ALTER TABLE conversations ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE SET NULL")
+            print("[DB] Migration: added user_id column to conversations")
+        except Exception:
+            # Column already exists — ignore
+            pass
+
+        print(f"[DB] SQLite database initialized at {DB_PATH}")
         _log_table_counts(conn)
 
 
@@ -117,12 +167,26 @@ def _log_table_counts(conn: sqlite3.Connection):
         print(f"[DB]   {table}: {count} rows")
 
 
-# ────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 # Conversations
-# ────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
+
 
 def create_conversation(title: str = "New Conversation") -> int:
     """Create a new conversation and return its ID."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        now = _utcnow()
+        result = supabase.table("conversations").insert({
+            "title": title,
+            "created_at": now,
+            "updated_at": now,
+        }).execute()
+        conv_id = result.data[0]["id"]
+        print(f"[DB] Created Supabase conversation #{conv_id}: '{title}'")
+        return conv_id
+
+    # SQLite fallback
     with get_db() as conn:
         cur = conn.execute(
             "INSERT INTO conversations (title) VALUES (?)",
@@ -135,6 +199,25 @@ def create_conversation(title: str = "New Conversation") -> int:
 
 def list_conversations(limit: int = 20, offset: int = 0) -> list[dict[str, Any]]:
     """List conversations, most recent first."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("conversations") \
+            .select("*, messages(count)") \
+            .order("updated_at", desc=True) \
+            .range(offset, offset + limit - 1) \
+            .execute()
+        convs = []
+        for row in result.data:
+            convs.append({
+                "id": row["id"],
+                "title": row["title"],
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+                "message_count": row.get("messages", [{}])[0].get("count", 0) if isinstance(row.get("messages"), list) else 0,
+            })
+        return convs
+
+    # SQLite fallback
     with get_db() as conn:
         rows = conn.execute(
             """SELECT c.*, (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) AS message_count
@@ -148,6 +231,17 @@ def list_conversations(limit: int = 20, offset: int = 0) -> list[dict[str, Any]]
 
 def get_conversation(conversation_id: int) -> Optional[dict[str, Any]]:
     """Get a single conversation by ID."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("conversations") \
+            .select("*") \
+            .eq("id", conversation_id) \
+            .execute()
+        if result.data:
+            return result.data[0]
+        return None
+
+    # SQLite fallback
     with get_db() as conn:
         row = conn.execute(
             "SELECT * FROM conversations WHERE id = ?",
@@ -158,6 +252,17 @@ def get_conversation(conversation_id: int) -> Optional[dict[str, Any]]:
 
 def delete_conversation(conversation_id: int) -> bool:
     """Delete a conversation and all its messages. Returns True if deleted."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        # First delete messages (CASCADE should handle this, but do explicitly)
+        supabase.table("messages").delete().eq("conversation_id", conversation_id).execute()
+        result = supabase.table("conversations").delete().eq("id", conversation_id).execute()
+        deleted = len(result.data) > 0
+        if deleted:
+            print(f"[DB] Deleted Supabase conversation #{conversation_id}")
+        return deleted
+
+    # SQLite fallback
     with get_db() as conn:
         cur = conn.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
         deleted = cur.rowcount > 0
@@ -166,9 +271,10 @@ def delete_conversation(conversation_id: int) -> bool:
         return deleted
 
 
-# ────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 # Messages
-# ────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
+
 
 def add_message(
     conversation_id: int,
@@ -179,6 +285,25 @@ def add_message(
     metadata: Optional[dict] = None,
 ) -> int:
     """Add a message to a conversation. Returns the message ID."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        now = _utcnow()
+        result = supabase.table("messages").insert({
+            "conversation_id": conversation_id,
+            "role": role,
+            "content": content,
+            "language": language,
+            "tool_used": tool_used,
+            "metadata_json": json.dumps(metadata) if metadata else None,
+            "created_at": now,
+        }).execute()
+        msg_id = result.data[0]["id"]
+        # Update conversation's updated_at
+        supabase.table("conversations").update({"updated_at": now}).eq("id", conversation_id).execute()
+        print(f"[DB] Added Supabase message #{msg_id} ({role}) to conversation #{conversation_id}")
+        return msg_id
+
+    # SQLite fallback
     with get_db() as conn:
         cur = conn.execute(
             """INSERT INTO messages (conversation_id, role, content, language, tool_used, metadata_json)
@@ -197,6 +322,29 @@ def add_message(
 
 def get_messages(conversation_id: int, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
     """Get messages for a conversation, oldest first."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("messages") \
+            .select("*") \
+            .eq("conversation_id", conversation_id) \
+            .order("created_at", desc=False) \
+            .range(offset, offset + limit - 1) \
+            .execute()
+        msgs = []
+        for r in result.data:
+            d = dict(r)
+            if d.get("metadata_json"):
+                try:
+                    d["metadata"] = json.loads(d["metadata_json"])
+                except (json.JSONDecodeError, TypeError):
+                    d["metadata"] = None
+            else:
+                d["metadata"] = None
+            del d["metadata_json"]
+            msgs.append(d)
+        return msgs
+
+    # SQLite fallback
     with get_db() as conn:
         rows = conn.execute(
             """SELECT * FROM messages
@@ -226,12 +374,27 @@ def get_conversation_context(conversation_id: int, max_messages: int = 10) -> li
     ]
 
 
-# ────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 # Generated UIs
-# ────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
+
 
 def add_generated_ui(prompt: str, title: str, filename: str, html_hash: Optional[str] = None) -> int:
     """Record a generated UI in the database."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("generated_uis").insert({
+            "prompt": prompt,
+            "title": title,
+            "filename": filename,
+            "html_hash": html_hash,
+            "created_at": _utcnow(),
+        }).execute()
+        uid = result.data[0]["id"]
+        print(f"[DB] Recorded Supabase generated UI #{uid}: '{title}' -> {filename}")
+        return uid
+
+    # SQLite fallback
     with get_db() as conn:
         cur = conn.execute(
             "INSERT INTO generated_uis (prompt, title, filename, html_hash) VALUES (?, ?, ?, ?)",
@@ -244,6 +407,16 @@ def add_generated_ui(prompt: str, title: str, filename: str, html_hash: Optional
 
 def list_generated_uis(limit: int = 20, offset: int = 0) -> list[dict[str, Any]]:
     """List generated UIs, most recent first."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("generated_uis") \
+            .select("*") \
+            .order("created_at", desc=True) \
+            .range(offset, offset + limit - 1) \
+            .execute()
+        return [dict(r) for r in result.data]
+
+    # SQLite fallback
     with get_db() as conn:
         rows = conn.execute(
             "SELECT * FROM generated_uis ORDER BY created_at DESC LIMIT ? OFFSET ?",
@@ -252,12 +425,28 @@ def list_generated_uis(limit: int = 20, offset: int = 0) -> list[dict[str, Any]]
         return [dict(r) for r in rows]
 
 
-# ────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 # API Cache
-# ────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
+
 
 def get_cached_response(service: str, cache_key: str) -> Optional[str]:
     """Get a cached API response if it exists and hasn't expired."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("api_cache") \
+            .select("response") \
+            .eq("service", service) \
+            .eq("cache_key", cache_key) \
+            .gt("expires_at", _utcnow()) \
+            .execute()
+        if result.data:
+            print(f"[DB-CACHE] Cache HIT for {service}/{cache_key}")
+            return result.data[0]["response"]
+        print(f"[DB-CACHE] Cache MISS for {service}/{cache_key}")
+        return None
+
+    # SQLite fallback
     with get_db() as conn:
         row = conn.execute(
             """SELECT response FROM api_cache
@@ -279,8 +468,25 @@ def set_cached_response(
     metadata: Optional[dict] = None,
 ):
     """Cache an API response with a TTL (default 5 minutes)."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        now = _utcnow()
+        expires_at = datetime.now(timezone.utc).timestamp() + ttl
+        expires_at_iso = datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat()
+        supabase.table("api_cache").upsert({
+            "cache_key": cache_key,
+            "service": service,
+            "response": response,
+            "metadata_json": json.dumps(metadata) if metadata else None,
+            "created_at": now,
+            "expires_at": expires_at_iso,
+        }, on_conflict="cache_key").execute()
+        print(f"[DB-CACHE] Cached {service}/{cache_key} (TTL: {ttl}s)")
+        return
+
+    # SQLite fallback
+    now = time.time()
     with get_db() as conn:
-        now = time.time()
         conn.execute(
             """INSERT INTO api_cache (cache_key, service, response, metadata_json, created_at, expires_at)
                VALUES (?, ?, ?, ?, ?, ?)
@@ -297,6 +503,14 @@ def set_cached_response(
 
 def clear_expired_cache():
     """Remove expired cache entries."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("api_cache").delete().lt("expires_at", _utcnow()).execute()
+        if result.data:
+            print(f"[DB-CACHE] Cleared {len(result.data)} expired cache entries")
+        return
+
+    # SQLite fallback
     with get_db() as conn:
         cur = conn.execute("DELETE FROM api_cache WHERE expires_at <= unixepoch()")
         if cur.rowcount:
@@ -305,17 +519,38 @@ def clear_expired_cache():
 
 def clear_cache_for_service(service: str):
     """Clear all cached entries for a specific service."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("api_cache").delete().eq("service", service).execute()
+        print(f"[DB-CACHE] Cleared {len(result.data)} entries for service '{service}'")
+        return
+
+    # SQLite fallback
     with get_db() as conn:
         cur = conn.execute("DELETE FROM api_cache WHERE service = ?", (service,))
         print(f"[DB-CACHE] Cleared {cur.rowcount} entries for service '{service}'")
 
 
-# ────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
 # User Preferences
-# ────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────
+
 
 def get_preference(key: str, default: Any = None) -> Any:
     """Get a user preference value."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("user_preferences") \
+            .select("value") \
+            .eq("key", key) \
+            .execute()
+        if not result.data:
+            return default
+        value = result.data[0]["value"]
+        # value is already parsed from JSONB
+        return value
+
+    # SQLite fallback
     with get_db() as conn:
         row = conn.execute(
             "SELECT value FROM user_preferences WHERE key = ?",
@@ -331,6 +566,16 @@ def get_preference(key: str, default: Any = None) -> Any:
 
 def set_preference(key: str, value: Any):
     """Set a user preference value."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        supabase.table("user_preferences").upsert({
+            "key": key,
+            "value": value,  # supabase-py handles JSONB serialization
+        }, on_conflict="key").execute()
+        print(f"[DB] Set Supabase preference '{key}' = {json.dumps(value)}")
+        return
+
+    # SQLite fallback
     with get_db() as conn:
         conn.execute(
             "INSERT INTO user_preferences (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?",
@@ -341,6 +586,12 @@ def set_preference(key: str, value: Any):
 
 def get_all_preferences() -> dict[str, Any]:
     """Get all user preferences as a dict."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("user_preferences").select("key, value").execute()
+        return {r["key"]: r["value"] for r in result.data}
+
+    # SQLite fallback
     with get_db() as conn:
         rows = conn.execute("SELECT key, value FROM user_preferences").fetchall()
         result = {}
@@ -350,3 +601,170 @@ def get_all_preferences() -> dict[str, Any]:
             except (json.JSONDecodeError, TypeError):
                 result[r["key"]] = r["value"]
         return result
+
+
+# ────────────────────────────────────────────────────────────────
+# Users (SQLite only — no Supabase auth tables)
+# ────────────────────────────────────────────────────────────────
+
+
+def create_user(username: str, password_hash: str, display_name: str = "") -> int:
+    """Create a new user. Returns the user ID. Raises ValueError if username exists."""
+    with get_db() as conn:
+        try:
+            cur = conn.execute(
+                "INSERT INTO users (username, display_name, password_hash) VALUES (?, ?, ?)",
+                (username, display_name, password_hash),
+            )
+            user_id = cur.lastrowid
+            print(f"[DB] Created user #{user_id}: '{username}'")
+            return user_id
+        except sqlite3.IntegrityError:
+            raise ValueError(f"Username '{username}' already exists")
+
+
+def get_user_by_username(username: str) -> Optional[dict[str, Any]]:
+    """Get a user by username."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM users WHERE username = ?",
+            (username,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def get_user_by_id(user_id: int) -> Optional[dict[str, Any]]:
+    """Get a user by ID."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM users WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def create_conversation_for_user(user_id: int, title: str = "New Conversation") -> int:
+    """Create a new conversation linked to a user. Returns the conversation ID."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        now = _utcnow()
+        result = supabase.table("conversations").insert({
+            "title": title,
+            "user_id": user_id,
+            "created_at": now,
+            "updated_at": now,
+        }).execute()
+        conv_id = result.data[0]["id"]
+        print(f"[DB] Created Supabase conversation #{conv_id} for user #{user_id}: '{title}'")
+        return conv_id
+
+    # SQLite fallback
+    with get_db() as conn:
+        cur = conn.execute(
+            "INSERT INTO conversations (title, user_id) VALUES (?, ?)",
+            (title, user_id),
+        )
+        conv_id = cur.lastrowid
+        print(f"[DB] Created conversation #{conv_id} for user #{user_id}: '{title}'")
+        return conv_id
+
+
+def list_conversations_for_user(user_id: int, limit: int = 20, offset: int = 0) -> list[dict[str, Any]]:
+    """List conversations for a specific user, most recent first."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("conversations") \
+            .select("*, messages(count)") \
+            .eq("user_id", user_id) \
+            .order("updated_at", desc=True) \
+            .range(offset, offset + limit - 1) \
+            .execute()
+        convs = []
+        for row in result.data:
+            convs.append({
+                "id": row["id"],
+                "title": row["title"],
+                "user_id": row.get("user_id"),
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+                "message_count": row.get("messages", [{}])[0].get("count", 0) if isinstance(row.get("messages"), list) else 0,
+                "last_preview": None,  # Supabase doesn't easily support subquery previews
+            })
+        return convs
+
+    # SQLite fallback
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT c.*,
+                      (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) AS message_count,
+                      (SELECT SUBSTR(content, 1, 100) FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) AS last_preview
+               FROM conversations c
+               WHERE c.user_id = ?
+               ORDER BY c.updated_at DESC
+               LIMIT ? OFFSET ?""",
+            (user_id, limit, offset),
+        ).fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            if d.get("last_preview") and len(d["last_preview"]) >= 100:
+                d["last_preview"] = d["last_preview"][:100] + "..."
+            result.append(d)
+        return result
+
+
+def update_conversation_title(conversation_id: int, title: str) -> bool:
+    """Update the title of a conversation. Returns True if updated."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        now = _utcnow()
+        result = supabase.table("conversations").update({
+            "title": title,
+            "updated_at": now,
+        }).eq("id", conversation_id).execute()
+        updated = len(result.data) > 0
+        if updated:
+            print(f"[DB] Updated Supabase conversation #{conversation_id} title to '{title}'")
+        return updated
+
+    # SQLite fallback
+    with get_db() as conn:
+        cur = conn.execute(
+            "UPDATE conversations SET title = ?, updated_at = unixepoch() WHERE id = ?",
+            (title, conversation_id),
+        )
+        updated = cur.rowcount > 0
+        if updated:
+            print(f"[DB] Updated conversation #{conversation_id} title to '{title}'")
+        return updated
+
+
+def get_last_message_preview(conversation_id: int) -> Optional[str]:
+    """Get the last message content preview (first 100 chars) for a conversation."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("messages") \
+            .select("content") \
+            .eq("conversation_id", conversation_id) \
+            .order("created_at", desc=True) \
+            .limit(1) \
+            .execute()
+        if result.data:
+            text = result.data[0]["content"][:100]
+            if len(result.data[0]["content"]) > 100:
+                text += "..."
+            return text
+        return None
+
+    # SQLite fallback
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT content FROM messages WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 1",
+            (conversation_id,),
+        ).fetchone()
+        if row:
+            text = row["content"][:100]
+            if len(row["content"]) > 100:
+                text += "..."
+            return text
+        return None

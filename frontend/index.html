@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MyAgent</title>
     <link rel="stylesheet" href="styles.css" />
+    <!-- Supabase JS SDK for real-time subscriptions -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <!-- Import map for Three.js and VRM -->
     <script type="importmap">
         {
@@ -33,6 +35,14 @@
 
             <div class="panel avatar-panel">
                 <div id="avatarContainer" class="avatar-container"></div>
+            </div>
+
+            <div class="panel conversation-panel">
+                <div class="conversation-panel-header">
+                    <h3>Chats</h3>
+                    <button id="newChatBtn" class="new-chat-btn" title="New Chat">+</button>
+                </div>
+                <div id="conversationList" class="conversation-list"></div>
             </div>
 
             <div class="panel playback-panel" style="text-align: center; padding: 10px;">
@@ -65,6 +75,17 @@
 
             <header class="hero">
                 <h2>MyAgent</h2>
+                <div id="authActions" class="auth-actions">
+                    <button id="showSignInBtn" class="auth-header-btn" type="button">Sign In</button>
+                    <button id="showSignUpBtn" class="auth-header-btn auth-header-btn-primary" type="button">Sign Up</button>
+                </div>
+                <div id="userProfile" class="user-profile header-user-profile" hidden>
+                    <div class="user-details">
+                        <div id="userDisplayName" class="user-name">User</div>
+                        <div id="userUsername" class="user-username">@username</div>
+                    </div>
+                    <button id="signOutBtn" class="auth-header-btn" type="button">Sign Out</button>
+                </div>
                 <p>Knowledge Base • Web Search • News • Weather</p>
             </header>
 
@@ -106,6 +127,60 @@
 
         </main>
 
+    </div>
+
+    <!-- Supabase configuration -->
+    <script>
+        window.SUPABASE_CONFIG = {
+            url: 'https://mnqphisyaumawekcwcgz.supabase.co',
+            anonKey: 'sb_publishable_2Xgu6Laqdv7zGYyf_DiKxw_ZracWuHm',
+        };
+    </script>
+
+    <!-- ── Auth Modal ────────────────────────────────────────────── -->
+    <div id="authModal" class="auth-modal" hidden>
+        <div class="auth-modal-content">
+            <span class="auth-close" id="authCloseBtn">&times;</span>
+
+            <div class="auth-tabs">
+                <button id="authTabSignIn" class="auth-tab active">Sign In</button>
+                <button id="authTabSignUp" class="auth-tab">Sign Up</button>
+            </div>
+
+            <!-- Sign In Form -->
+            <form id="signInForm" class="auth-form">
+                <h3>Sign In</h3>
+                <div class="auth-field">
+                    <label for="signInUsername">Username</label>
+                    <input id="signInUsername" type="text" placeholder="Enter your username" required minlength="3" />
+                </div>
+                <div class="auth-field">
+                    <label for="signInPassword">Password</label>
+                    <input id="signInPassword" type="password" placeholder="Enter your password" required minlength="4" />
+                </div>
+                <div id="signInError" class="auth-error" style="display:none;"></div>
+                <button type="submit" class="auth-submit">Sign In</button>
+            </form>
+
+            <!-- Sign Up Form -->
+            <form id="signUpForm" class="auth-form" hidden>
+                <h3>Create Account</h3>
+                <div class="auth-field">
+                    <label for="signUpUsername">Username</label>
+                    <input id="signUpUsername" type="text" placeholder="Choose a username" required minlength="3" />
+                </div>
+                <div class="auth-field">
+                    <label for="signUpDisplayName">Display Name (optional)</label>
+                    <input id="signUpDisplayName" type="text" placeholder="Your display name" />
+                </div>
+                <div class="auth-field">
+                    <label for="signUpPassword">Password</label>
+                    <input id="signUpPassword" type="password" placeholder="Choose a password" required minlength="4" />
+                </div>
+                <div id="signUpError" class="auth-error" style="display:none;"></div>
+                <button type="submit" class="auth-submit">Create Account</button>
+            </form>
+        </div>
     </div>
 
     <script type="module" src="script.js"></script>

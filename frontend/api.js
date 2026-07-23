@@ -6,7 +6,24 @@
  * base URL configuration, and logging.
  */
 
-const API_BASE = "http://127.0.0.1:8000";
+import { API_BASE } from "./config.js";
+
+/**
+ * Get the stored JWT token from localStorage.
+ * @returns {string|null}
+ */
+function getAuthToken() {
+  try {
+    const raw = localStorage.getItem("myagent_auth");
+    if (raw) {
+      const auth = JSON.parse(raw);
+      return auth.token || null;
+    }
+  } catch (e) {
+    // Ignore
+  }
+  return null;
+}
 
 /**
  * Generic fetch wrapper with error handling.
@@ -20,6 +37,12 @@ async function request(endpoint, options = {}) {
   const defaultHeaders = {
     "Content-Type": "application/json",
   };
+
+  // Attach JWT token if available
+  const token = getAuthToken();
+  if (token) {
+    defaultHeaders["Authorization"] = `Bearer ${token}`;
+  }
 
   const config = {
     headers: { ...defaultHeaders, ...options.headers },
@@ -58,7 +81,7 @@ export async function checkHealth() {
 }
 
 /**
- * Send a chat message and get an AI response.
+ * Send a chat message and get an AI response (v1 - legacy, uses global conversation).
  * @param {string} message - User message text
  * @param {string} language - Language code ("en" or "hi")
  * @returns {Promise<object>} Response with `response` field
@@ -67,6 +90,27 @@ export async function sendChatMessage(message, language = "en") {
   return request("/api/chat", {
     method: "POST",
     body: JSON.stringify({ message, language }),
+  });
+}
+
+/**
+ * Send a chat message with conversation persistence (v2).
+ * Supports conversation_id for continuing existing conversations.
+ * Automatically attaches auth token. Creates user-scoped conversations when authenticated.
+ * 
+ * @param {string} message - User message text
+ * @param {string} language - Language code ("en" or "hi")
+ * @param {number|null} conversationId - Conversation ID to continue, or null for new
+ * @returns {Promise<object>} Response with conversation_id, response, ui, conversation, last_preview
+ */
+export async function sendChatMessageV2(message, language = "en", conversationId = null) {
+  return request("/api/v2/chat", {
+    method: "POST",
+    body: JSON.stringify({
+      message,
+      language,
+      conversation_id: conversationId,
+    }),
   });
 }
 
@@ -139,5 +183,51 @@ export async function transcribeAudio(audioBlob, language = "en") {
   return request("/transcribe", {
     method: "POST",
     body: formData,
+  });
+}
+
+/**
+ * Get all conversations for the current user.
+ * Automatically filters by user when authenticated.
+ * @param {number} limit - Max conversations to fetch
+ * @param {number} offset - Pagination offset
+ * @returns {Promise<object>} Response with `conversations` array
+ */
+export async function getUserConversations(limit = 50, offset = 0) {
+  return request(`/api/conversations?limit=${limit}&offset=${offset}`);
+}
+
+/**
+ * Get messages for a specific conversation.
+ * @param {number} conversationId - The conversation ID
+ * @param {number} limit - Max messages to fetch
+ * @param {number} offset - Pagination offset
+ * @returns {Promise<object>} Response with `conversation` and `messages` arrays
+ */
+export async function getConversationMessages(conversationId, limit = 100, offset = 0) {
+  return request(`/api/conversations/${conversationId}?limit=${limit}&offset=${offset}`);
+}
+
+/**
+ * Update a conversation's title.
+ * @param {number} conversationId - The conversation ID
+ * @param {string} title - New title
+ * @returns {Promise<object>} Response with status
+ */
+export async function updateConversationTitle(conversationId, title) {
+  return request(`/api/conversations/${conversationId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ title }),
+  });
+}
+
+/**
+ * Delete a conversation and all its messages.
+ * @param {number} conversationId - The conversation ID
+ * @returns {Promise<object>} Response with status
+ */
+export async function deleteConversation(conversationId) {
+  return request(`/api/conversations/${conversationId}`, {
+    method: "DELETE",
   });
 }

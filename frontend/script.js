@@ -1,13 +1,29 @@
 import { avatar } from './avatar/avatar.js';
-import { checkHealth, sendChatMessage, generateSpeech, transcribeAudio } from './api.js';
+import { checkHealth, sendChatMessageV2, generateSpeech, transcribeAudio, getUserConversations, getConversationMessages } from './api.js';
+import { subscribeToMessages } from './supabase_client.js';
+import {
+  initAuth,
+  isAuthenticated,
+  getUser,
+  signIn,
+  signUp,
+  signOut as authSignOut,
+  getLastConversationId,
+  setLastConversationId,
+} from './auth.js';
 
 const messagesDiv = document.getElementById("messages");
 const input = document.getElementById("messageInput");
 const typing = document.getElementById("typing");
 const recordBtn = document.getElementById("recordBtn");
 const playbackBtn = document.getElementById("playbackBtn");
+const conversationListEl = document.getElementById("conversationList");
+const newChatBtn = document.getElementById("newChatBtn");
 
 let currentAudio = null;
+let _currentConversationId = null;
+let _conversations = [];
+let _unsubscribeMessages = null;
 
 function togglePlayback() {
   if (!currentAudio) return;
@@ -77,10 +93,14 @@ function setAgentState(state) {
 
 setAgentState("idle");
 
-avatar.init('avatarContainer');
-avatar.load('avatar/assistant.vrm', 'models/idle.vrma', 'models/talking.vrma')
-    .then(() => console.log('Avatar loaded successfully'))
-    .catch(err => console.error('Failed to load avatar:', err));
+try {
+  avatar.init('avatarContainer');
+  avatar.load('avatar/assistant.vrm', 'models/idle.vrma', 'models/talking.vrma')
+      .then(() => console.log('Avatar loaded successfully'))
+      .catch(err => console.error('Failed to load avatar:', err));
+} catch (err) {
+  console.error('Avatar init failed — continuing without avatar:', err);
+}
 
 const englishBtn =
   document.getElementById("englishBtn");
@@ -428,6 +448,157 @@ function drawVisualizer(dataArray) {
   }
 }
 
+// ── Conversation List ──────────────────────────────────────────────────────
+
+/**
+ * Format a unix timestamp to a relative time string.
+ */
+function formatTime(timestamp) {
+  if (!timestamp) return '';
+  const date = new Date(timestamp * 1000);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
+/**
+ * Render the conversation list in the sidebar.
+ */
+function renderConversationList(conversations) {
+  if (!conversationListEl) return;
+  _conversations = conversations;
+
+  if (!conversations || conversations.length === 0) {
+    conversationListEl.innerHTML = '<div class="conversation-empty">No conversations yet</div>';
+    return;
+  }
+
+  let html = '';
+  for (const conv of conversations) {
+    const isActive = conv.id === _currentConversationId;
+    const title = conv.title || 'New Conversation';
+    const preview = conv.last_preview || '';
+    const time = formatTime(conv.updated_at);
+
+    html += `
+      <div class="conversation-item ${isActive ? 'active' : ''}" data-conv-id="${conv.id}">
+        <div class="conversation-item-title">${escapeHtml(title)}</div>
+        <div class="conversation-item-preview">${escapeHtml(preview)}</div>
+        <div class="conversation-item-time">${time}</div>
+      </div>
+    `;
+  }
+
+  conversationListEl.innerHTML = html;
+
+  // Attach click handlers
+  conversationListEl.querySelectorAll('.conversation-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const convId = parseInt(el.dataset.convId, 10);
+      if (convId && convId !== _currentConversationId) {
+        switchConversation(convId);
+      }
+    });
+  });
+}
+
+/**
+ * Switch to a different conversation, loading its messages.
+ */
+async function switchConversation(conversationId) {
+  if (!conversationId) return;
+
+  // Unsubscribe from real-time for previous conversation
+  if (_unsubscribeMessages) {
+    _unsubscribeMessages();
+    _unsubscribeMessages = null;
+  }
+
+  _currentConversationId = conversationId;
+  setLastConversationId(conversationId);
+
+  // Clear messages and show loading
+  messagesDiv.innerHTML = '';
+
+  try {
+    const data = await getConversationMessages(conversationId);
+    if (data.messages) {
+      for (const msg of data.messages) {
+        addMessage(msg.content, msg.role === 'user' ? 'user' : 'ai');
+        // Render GenUI card if present in metadata
+        if (msg.metadata && msg.metadata.integration) {
+          // We don't have the full ui data here, so skip card rendering for loaded messages
+        }
+      }
+    }
+
+    // Update conversation list highlight
+    renderConversationList(_conversations);
+
+    // Subscribe to real-time updates for this conversation
+    subscribeToConversation(conversationId);
+
+  } catch (err) {
+    console.error('Failed to load conversation:', err);
+    addMessage('Could not load conversation messages.', 'ai');
+  }
+}
+
+/**
+ * Start a new conversation.
+ */
+async function startNewConversation() {
+  // Clear the current conversation ID so the next send creates a new one
+  _currentConversationId = null;
+  setLastConversationId(null);
+
+  // Clear messages
+  messagesDiv.innerHTML = '';
+  addMessage('Hello. I am your local AI assistant.', 'ai');
+
+  // Unsubscribe from real-time
+  if (_unsubscribeMessages) {
+    _unsubscribeMessages();
+    _unsubscribeMessages = null;
+  }
+
+  // Update conversation list highlight
+  renderConversationList(_conversations);
+}
+
+// ── Supabase Real-time Subscription ────────────────────────────────────────
+
+/**
+ * Subscribe to real-time messages for a given conversation.
+ * Unsubscribes from any previous conversation first.
+ */
+function subscribeToConversation(conversationId) {
+  // Unsubscribe from previous conversation
+  if (_unsubscribeMessages) {
+    _unsubscribeMessages();
+    _unsubscribeMessages = null;
+  }
+
+  if (!conversationId) return;
+
+  _unsubscribeMessages = subscribeToMessages(conversationId, (message) => {
+    // Only add messages from "assistant" role (user messages are already added by sendMessage)
+    if (message.role === 'assistant' && message.content) {
+      addMessage(message.content, 'ai');
+    }
+  });
+}
+
+// ── Send Message (v2 with conversation persistence) ────────────────────────
+
 async function sendMessage() {
 
   const message = input.value.trim();
@@ -452,9 +623,15 @@ async function sendMessage() {
 
   try {
 
-    const data = await sendChatMessage(message, currentLanguage);
+    const data = await sendChatMessageV2(message, currentLanguage, _currentConversationId);
 
     typing.style.display = "none";
+
+    // Update current conversation ID
+    if (data.conversation_id) {
+      _currentConversationId = data.conversation_id;
+      setLastConversationId(data.conversation_id);
+    }
 
     addMessage(data.response, "ai");
 
@@ -462,6 +639,9 @@ async function sendMessage() {
     if (data.ui) {
       renderGenUICard(data.ui);
     }
+
+    // Refresh conversation list
+    loadConversations();
 
     speakResponse(data.response);
 
@@ -664,16 +844,280 @@ function stopRecording() {
 input.addEventListener("keydown", function (event) {
 
   if (event.key === "Enter") {
-    sendMessage();
+    window.sendMessage();
   }
 });
 
-// Check backend health on startup
-(async function init() {
+// ── Load Conversations ─────────────────────────────────────────────────────
+
+async function loadConversations() {
   try {
+    const data = await getUserConversations(50, 0);
+    const conversations = data.conversations || [];
+
+    // Enrich with last message preview (the API already returns message_count)
+    // We'll use the title as-is
+    renderConversationList(conversations);
+
+    return conversations;
+  } catch (err) {
+    console.error('Failed to load conversations:', err);
+    return [];
+  }
+}
+
+// ── Auth UI Logic ──────────────────────────────────────────────────────────
+
+const authModal = document.getElementById("authModal");
+const authActions = document.getElementById("authActions");
+const showSignInBtn = document.getElementById("showSignInBtn");
+const showSignUpBtn = document.getElementById("showSignUpBtn");
+const authCloseBtn = document.getElementById("authCloseBtn");
+const authTabSignIn = document.getElementById("authTabSignIn");
+const authTabSignUp = document.getElementById("authTabSignUp");
+const signInForm = document.getElementById("signInForm");
+const signUpForm = document.getElementById("signUpForm");
+const signInError = document.getElementById("signInError");
+const signUpError = document.getElementById("signUpError");
+const userProfile = document.getElementById("userProfile");
+const signOutBtn = document.getElementById("signOutBtn");
+const userDisplayName = document.getElementById("userDisplayName");
+const userUsername = document.getElementById("userUsername");
+
+/**
+ * Show the auth modal.
+ */
+function showAuthModal(mode = "signin") {
+  authModal.hidden = false;
+  mode === "signup" ? switchToSignUp() : switchToSignIn();
+}
+
+/**
+ * Hide the auth modal.
+ */
+function hideAuthModal() {
+  authModal.hidden = true;
+  signInError.style.display = "none";
+  signUpError.style.display = "none";
+}
+
+/**
+ * Switch to the Sign In tab.
+ */
+function switchToSignIn() {
+  authTabSignIn.classList.add("active");
+  authTabSignUp.classList.remove("active");
+  signInForm.hidden = false;
+  signUpForm.hidden = true;
+  signInError.style.display = "none";
+  signUpError.style.display = "none";
+}
+
+/**
+ * Switch to the Sign Up tab.
+ */
+function switchToSignUp() {
+  authTabSignUp.classList.add("active");
+  authTabSignIn.classList.remove("active");
+  signUpForm.hidden = false;
+  signInForm.hidden = true;
+  signInError.style.display = "none";
+  signUpError.style.display = "none";
+}
+
+/**
+ * Update the UI to reflect the current auth state.
+ */
+function updateAuthUI(authed = isAuthenticated()) {
+  const user = getUser();
+
+  if (authed && user) {
+    // Show the compact signed-in header state.
+    userProfile.hidden = false;
+    authActions.hidden = true;
+    userDisplayName.textContent = user.display_name || user.username;
+    userUsername.textContent = `@${user.username}`;
+  } else {
+    // Show the sign-in and sign-up actions.
+    userProfile.hidden = true;
+    authActions.hidden = false;
+  }
+}
+
+// ── Auth Event Handlers ────────────────────────────────────────────────────
+
+// Show auth modal
+showSignInBtn.addEventListener("click", () => showAuthModal("signin"));
+showSignUpBtn.addEventListener("click", () => showAuthModal("signup"));
+
+// Close auth modal
+authCloseBtn.addEventListener("click", hideAuthModal);
+
+// Close modal when clicking outside
+authModal.addEventListener("click", (e) => {
+  if (e.target === authModal) {
+    hideAuthModal();
+  }
+});
+
+// Tab switching
+authTabSignIn.addEventListener("click", switchToSignIn);
+authTabSignUp.addEventListener("click", switchToSignUp);
+
+// Sign In form submission
+signInForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  signInError.style.display = "none";
+
+  const username = document.getElementById("signInUsername").value.trim();
+  const password = document.getElementById("signInPassword").value;
+
+  if (!username || !password) {
+    signInError.textContent = "Please fill in all fields.";
+    signInError.style.display = "block";
+    return;
+  }
+
+  const submitBtn = signInForm.querySelector(".auth-submit");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Signing in...";
+
+  try {
+    await signIn(username, password);
+    hideAuthModal();
+    updateAuthUI();
+    addMessage(`Welcome back, ${getUser().display_name || getUser().username}!`, "ai");
+    // Load user's conversations after sign in
+    await loadAndRestoreConversation();
+  } catch (err) {
+    signInError.textContent = err.message;
+    signInError.style.display = "block";
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Sign In";
+  }
+});
+
+// Sign Up form submission
+signUpForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  signUpError.style.display = "none";
+
+  const username = document.getElementById("signUpUsername").value.trim();
+  const displayName = document.getElementById("signUpDisplayName").value.trim();
+  const password = document.getElementById("signUpPassword").value;
+
+  if (!username || !password) {
+    signUpError.textContent = "Please fill in all required fields.";
+    signUpError.style.display = "block";
+    return;
+  }
+
+  if (username.length < 3) {
+    signUpError.textContent = "Username must be at least 3 characters.";
+    signUpError.style.display = "block";
+    return;
+  }
+
+  if (password.length < 4) {
+    signUpError.textContent = "Password must be at least 4 characters.";
+    signUpError.style.display = "block";
+    return;
+  }
+
+  const submitBtn = signUpForm.querySelector(".auth-submit");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Creating account...";
+
+  try {
+    await signUp(username, password, displayName);
+    hideAuthModal();
+    updateAuthUI();
+    addMessage(`Welcome, ${getUser().display_name || getUser().username}! Your account has been created.`, "ai");
+    // Load user's conversations after sign up
+    await loadAndRestoreConversation();
+  } catch (err) {
+    signUpError.textContent = err.message;
+    signUpError.style.display = "block";
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Create Account";
+  }
+});
+
+// Sign Out
+signOutBtn.addEventListener("click", () => {
+  authSignOut();
+  updateAuthUI();
+  addMessage("You have been signed out.", "ai");
+  // Clear conversation state
+  _currentConversationId = null;
+  setLastConversationId(null);
+  messagesDiv.innerHTML = '';
+  addMessage('Hello. I am your local AI assistant.', 'ai');
+  renderConversationList([]);
+});
+
+// New Chat button
+if (newChatBtn) {
+  newChatBtn.addEventListener('click', startNewConversation);
+}
+
+// ── Load and Restore Conversation ──────────────────────────────────────────
+
+/**
+ * Load conversations and restore the last active conversation.
+ * Called on startup and after sign-in/sign-up.
+ */
+async function loadAndRestoreConversation() {
+  const conversations = await loadConversations();
+
+  // Try to restore the last conversation ID from localStorage
+  let targetConvId = getLastConversationId();
+
+  // If no stored ID, use the most recent conversation
+  if (!targetConvId && conversations.length > 0) {
+    targetConvId = conversations[0].id;
+  }
+
+  // If we have a target conversation, load its messages
+  if (targetConvId) {
+    // Check if the conversation still exists in the list
+    const exists = conversations.some(c => c.id === targetConvId);
+    if (exists) {
+      await switchConversation(targetConvId);
+    } else {
+      // Conversation was deleted, start fresh
+      startNewConversation();
+    }
+  } else {
+    // No conversations exist, show welcome
+    messagesDiv.innerHTML = '';
+    addMessage('Hello. I am your local AI assistant.', 'ai');
+  }
+}
+
+// ── Initialize on Startup ──────────────────────────────────────────────────
+
+(async function initWithAuth() {
+  try {
+    // Check auth state
+    const authed = await initAuth();
+    updateAuthUI(authed);
+
+    if (authed) {
+      console.log("[Auth] User is signed in:", getUser().username);
+    } else {
+      console.log("[Auth] User is not signed in");
+    }
+
     const health = await checkHealth();
     console.log("Backend connected:", health);
     addMessage(`System ready. Connected to ${health.services.llm} backend.`, "ai");
+
+    // Load conversations and restore the last active one
+    await loadAndRestoreConversation();
+
   } catch (err) {
     console.warn("Backend not reachable on startup:", err.message);
   }
