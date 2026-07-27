@@ -1,19 +1,20 @@
 """
 Authentication module for MyAgent.
 
-Provides username/password authentication with bcrypt password hashing
-and JWT token management. Fully self-contained (no Supabase dependency).
+Provides username/password authentication with bcrypt password hashing,
+JWT token management, and session persistence (stored in database).
 """
 
 import os
 import time
-from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from database import create_session, get_session_by_token, delete_session
 
 # JWT Configuration
 JWT_SECRET = os.getenv("JWT_SECRET", "myagent-secret-key-change-in-production")
@@ -38,14 +39,23 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_token(user_id: int, username: str) -> str:
-    """Create a JWT access token for a user."""
+    """Create a JWT access token and persist it as a session in the database."""
+    now = int(time.time())
+    expires_at = now + JWT_EXPIRY_HOURS * 3600
     payload = {
         "sub": str(user_id),
         "username": username,
-        "iat": int(time.time()),
-        "exp": int(time.time() + JWT_EXPIRY_HOURS * 3600),
+        "iat": now,
+        "exp": expires_at,
     }
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    
+    # Persist the session in the database (Supabase or SQLite)
+    try:
+        create_session(user_id, token, float(expires_at))
+    except Exception as e:
+        print(f"[Auth] Warning: failed to persist session: {e}")
+    
     return token
 
 
@@ -65,18 +75,30 @@ async def get_current_user(
 ) -> Optional[dict]:
     """
     FastAPI dependency that extracts the current user from the JWT token.
-    Returns None if no valid token is provided (anonymous access allowed).
+    Validates the session exists in the database (not just the JWT).
+    Returns None if no valid session (anonymous access allowed).
     """
     if credentials is None:
         return None
 
-    payload = decode_token(credentials.credentials)
+    token = credentials.credentials
+
+    # First validate the JWT itself
+    payload = decode_token(token)
     if payload is None:
+        return None
+
+    # Then validate the session exists in the database (not expired)
+    session = get_session_by_token(token)
+    if session is None:
+        # Session not found or expired — clean up
+        print(f"[Auth] No valid database session for token (may have expired)")
         return None
 
     return {
         "user_id": int(payload["sub"]),
         "username": payload["username"],
+        "session_id": session["id"],
     }
 
 
@@ -84,8 +106,8 @@ async def require_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> dict:
     """
-    FastAPI dependency that requires a valid JWT token.
-    Raises 401 if no token or invalid token.
+    FastAPI dependency that requires a valid authenticated session.
+    Raises 401 if no token or invalid/expired session.
     """
     user = await get_current_user(credentials)
     if user is None:

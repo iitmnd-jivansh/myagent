@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat History — MyAgent</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:#14121b;color:#e6e0ee;font-family:Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+        .history-header{background:#1c1a24;border-bottom:1px solid rgba(255,255,255,.08);padding:16px 24px;display:flex;align-items:center;gap:16px}
+        .history-header h1{font-size:20px;flex:1}
+        .history-header .back-link{color:#947dff;text-decoration:none;font-size:14px;font-weight:600}
+        .history-header .back-link:hover{text-decoration:underline}
+        .history-main{flex:1;padding:24px;max-width:900px;margin:0 auto;width:100%}
+        .history-title{font-size:24px;font-weight:700;margin-bottom:24px;color:#e6e0ee}
+        .history-stats{font-size:13px;color:#888;margin-bottom:16px}
+        .history-empty{text-align:center;padding:60px 20px;color:#666}
+        .history-empty-icon{font-size:48px;margin-bottom:16px}
+        .history-empty-text{font-size:16px;margin-bottom:8px}
+        .history-empty-sub{font-size:13px;color:#555}
+        .history-loading{text-align:center;padding:40px;color:#888}
+        .history-error{background:rgba(147,0,10,.2);border:1px solid #93000a;border-radius:12px;padding:14px;margin-bottom:16px;color:#ff8a80;display:none}
+        .history-list{display:flex;flex-direction:column;gap:8px}
+        .history-item{background:#1c1a24;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px 20px;display:flex;align-items:center;gap:16px;transition:border-color .2s}
+        .history-item:hover{border-color:rgba(148,125,255,.3)}
+        .history-item-content{flex:1;min-width:0;cursor:pointer}
+        .history-item-title{font-size:15px;font-weight:600;color:#e6e0ee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px}
+        .history-item-preview{font-size:12px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px}
+        .history-item-meta{font-size:11px;color:#666;display:flex;gap:12px}
+        .history-item-meta span{display:flex;align-items:center;gap:4px}
+        .history-delete-btn{padding:8px 14px;border:1px solid rgba(147,0,10,.4);border-radius:10px;background:rgba(147,0,10,.1);color:#ff8a80;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;flex-shrink:0}
+        .history-delete-btn:hover{background:rgba(147,0,10,.3);border-color:#93000a}
+        .history-delete-btn:disabled{opacity:.4;cursor:not-allowed}
+        @media(max-width:600px){.history-main{padding:16px}.history-item{padding:12px 16px;flex-wrap:wrap}.history-delete-btn{padding:6px 12px}}
+    </style>
+</head>
+<body>
+    <div class="history-header">
+        <h1>📋 Chat History</h1>
+        <a href="/" class="back-link">← Back to Chat</a>
+    </div>
+
+    <div class="history-main">
+        <div class="history-title">Your Conversations</div>
+        <div class="history-stats" id="historyStats"></div>
+        <div id="historyError" class="history-error"></div>
+        <div id="historyLoading" class="history-loading">Loading conversations...</div>
+        <div id="historyList" class="history-list"></div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        const historyList = document.getElementById('historyList');
+        const historyLoading = document.getElementById('historyLoading');
+        const historyError = document.getElementById('historyError');
+        const historyStats = document.getElementById('historyStats');
+
+        // Check auth — redirect if not signed in
+        (function checkAuth() {
+            try {
+                const raw = localStorage.getItem('myagent_auth');
+                if (!raw) {
+                    window.location.replace('signin.html');
+                    return;
+                }
+                const auth = JSON.parse(raw);
+                if (!auth || !auth.token) {
+                    window.location.replace('signin.html');
+                }
+            } catch (e) {
+                window.location.replace('signin.html');
+            }
+        })();
+
+        function getToken() {
+            try {
+                const raw = localStorage.getItem('myagent_auth');
+                if (raw) {
+                    const auth = JSON.parse(raw);
+                    return auth.token || null;
+                }
+            } catch (e) {}
+            return null;
+        }
+
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            return date.toLocaleDateString();
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        async function loadConversations() {
+            historyLoading.style.display = 'block';
+            historyError.style.display = 'none';
+
+            try {
+                const token = getToken();
+                const response = await fetch(API_BASE + '/api/conversations?limit=100&offset=0', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load conversations');
+                }
+
+                const data = await response.json();
+                const conversations = data.conversations || [];
+
+                historyLoading.style.display = 'none';
+                renderConversations(conversations);
+            } catch (err) {
+                historyLoading.style.display = 'none';
+                historyError.textContent = 'Could not load conversations. Make sure the backend is running.';
+                historyError.style.display = 'block';
+                console.error(err);
+            }
+        }
+
+        function renderConversations(conversations) {
+            if (!conversations || conversations.length === 0) {
+                historyList.innerHTML = `
+                    <div class="history-empty">
+                        <div class="history-empty-icon">💬</div>
+                        <div class="history-empty-text">No conversations yet</div>
+                        <div class="history-empty-sub">Start a new chat to see your history here</div>
+                        <a href="/" style="display:inline-block;margin-top:16px;padding:10px 20px;background:#947dff;color:white;text-decoration:none;border-radius:12px;font-weight:600;">Start a Chat</a>
+                    </div>
+                `;
+                historyStats.textContent = '0 conversations';
+                return;
+            }
+
+            historyStats.textContent = `${conversations.length} conversation${conversations.length !== 1 ? 's' : ''}`;
+
+            let html = '';
+            for (const conv of conversations) {
+                const title = conv.title || 'New Conversation';
+                const preview = conv.last_preview || '';
+                const time = conv.updated_at ? formatTime(new Date(conv.updated_at).getTime()) : '';
+                const msgCount = conv.message_count || 0;
+
+                html += `
+                    <div class="history-item" data-conv-id="${conv.id}">
+                        <div class="history-item-content" onclick="openConversation(${conv.id})">
+                            <div class="history-item-title">${escapeHtml(title)}</div>
+                            <div class="history-item-preview">${escapeHtml(preview) || 'No messages yet'}</div>
+                            <div class="history-item-meta">
+                                <span>💬 ${msgCount} message${msgCount !== 1 ? 's' : ''}</span>
+                                <span>🕐 ${time}</span>
+                            </div>
+                        </div>
+                        <button class="history-delete-btn" onclick="deleteConversation(${conv.id})" data-conv-id="${conv.id}">Delete</button>
+                    </div>
+                `;
+            }
+
+            historyList.innerHTML = html;
+        }
+
+        function openConversation(convId) {
+            // Store the conversation ID and redirect to main app
+            try {
+                localStorage.setItem('myagent_last_conversation', String(convId));
+            } catch (e) {}
+            window.location.href = '/';
+        }
+
+        async function deleteConversation(convId) {
+            const btn = document.querySelector(`.history-delete-btn[data-conv-id="${convId}"]`);
+            if (!btn) return;
+
+            // Confirm
+            if (!confirm('Delete this conversation and all its messages?')) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Deleting...';
+
+            try {
+                const token = getToken();
+                const response = await fetch(API_BASE + `/api/conversations/${convId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete');
+                }
+
+                // Remove the item from the DOM
+                const item = btn.closest('.history-item');
+                if (item) {
+                    item.style.transition = 'all .3s';
+                    item.style.opacity = '0';
+                    item.style.transform = 'translateX(20px)';
+                    setTimeout(() => item.remove(), 300);
+                }
+
+                // Update stats
+                const remaining = document.querySelectorAll('.history-item').length - 1;
+                historyStats.textContent = `${remaining} conversation${remaining !== 1 ? 's' : ''}`;
+
+            } catch (err) {
+                btn.disabled = false;
+                btn.textContent = 'Delete';
+                historyError.textContent = 'Failed to delete conversation.';
+                historyError.style.display = 'block';
+                console.error(err);
+            }
+        }
+
+        // Load conversations on page load
+        loadConversations();
+    </script>
+</body>
+</html>

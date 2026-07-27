@@ -67,11 +67,10 @@ def _utcnow():
 def init_db():
     """Initialize the database.
 
-    Always creates the local SQLite tables, even when Supabase is enabled,
-    because user auth (create_user / get_user_by_username / get_user_by_id)
-    is SQLite-only and has no Supabase equivalent. Skipping this step when
-    Supabase is enabled left the `users` table missing, causing
-    'no such table: users' on every signin/signup.
+    Creates the local SQLite tables (always — for SQLite fallback mode).
+    When Supabase is enabled, users and sessions are stored in PostgreSQL
+    via the Supabase client, but local SQLite tables are still created
+    as a fallback in case Supabase is temporarily unavailable.
     """
     if is_supabase_enabled():
         print("[DB] Using Supabase PostgreSQL backend for conversations/messages")
@@ -130,6 +129,24 @@ def init_db():
 
             CREATE INDEX IF NOT EXISTS idx_api_cache_expires
                 ON api_cache(expires_at);
+
+            -- ── Sessions ────────────────────────────────────────────────────
+            CREATE TABLE IF NOT EXISTS sessions (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                token           TEXT    NOT NULL UNIQUE,
+                created_at      REAL    NOT NULL DEFAULT (unixepoch()),
+                expires_at      REAL    NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_sessions_token
+                ON sessions(token);
+
+            CREATE INDEX IF NOT EXISTS idx_sessions_user_id
+                ON sessions(user_id);
+
+            CREATE INDEX IF NOT EXISTS idx_sessions_expires_at
+                ON sessions(expires_at);
 
             -- ── Users ─────────────────────────────────────────────────────
             CREATE TABLE IF NOT EXISTS users (
@@ -604,12 +621,28 @@ def get_all_preferences() -> dict[str, Any]:
 
 
 # ────────────────────────────────────────────────────────────────
-# Users (SQLite only — no Supabase auth tables)
+# Users (SQLite fallback + Supabase)
 # ────────────────────────────────────────────────────────────────
 
 
 def create_user(username: str, password_hash: str, display_name: str = "") -> int:
     """Create a new user. Returns the user ID. Raises ValueError if username exists."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        # Check if username already exists
+        existing = supabase.table("users").select("id").eq("username", username).execute()
+        if existing.data:
+            raise ValueError(f"Username '{username}' already exists")
+        result = supabase.table("users").insert({
+            "username": username,
+            "display_name": display_name,
+            "password_hash": password_hash,
+        }).execute()
+        user_id = result.data[0]["id"]
+        print(f"[DB] Created Supabase user #{user_id}: '{username}'")
+        return user_id
+
+    # SQLite fallback
     with get_db() as conn:
         try:
             cur = conn.execute(
@@ -617,7 +650,7 @@ def create_user(username: str, password_hash: str, display_name: str = "") -> in
                 (username, display_name, password_hash),
             )
             user_id = cur.lastrowid
-            print(f"[DB] Created user #{user_id}: '{username}'")
+            print(f"[DB] Created SQLite user #{user_id}: '{username}'")
             return user_id
         except sqlite3.IntegrityError:
             raise ValueError(f"Username '{username}' already exists")
@@ -625,6 +658,14 @@ def create_user(username: str, password_hash: str, display_name: str = "") -> in
 
 def get_user_by_username(username: str) -> Optional[dict[str, Any]]:
     """Get a user by username."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("users").select("*").eq("username", username).execute()
+        if result.data:
+            return result.data[0]
+        return None
+
+    # SQLite fallback
     with get_db() as conn:
         row = conn.execute(
             "SELECT * FROM users WHERE username = ?",
@@ -635,12 +676,165 @@ def get_user_by_username(username: str) -> Optional[dict[str, Any]]:
 
 def get_user_by_id(user_id: int) -> Optional[dict[str, Any]]:
     """Get a user by ID."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("users").select("*").eq("id", user_id).execute()
+        if result.data:
+            return result.data[0]
+        return None
+
+    # SQLite fallback
     with get_db() as conn:
         row = conn.execute(
             "SELECT * FROM users WHERE id = ?",
             (user_id,),
         ).fetchone()
         return dict(row) if row else None
+
+
+# ────────────────────────────────────────────────────────────────
+# Sessions (Supabase + SQLite fallback)
+# ────────────────────────────────────────────────────────────────
+
+
+def create_session(user_id: int, token: str, expires_at: float) -> int:
+    """
+    Create a new session for a user.
+    
+    Args:
+        user_id: The user's ID
+        token: The JWT token string
+        expires_at: Unix timestamp when the session expires
+    
+    Returns:
+        The session ID
+    """
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        from datetime import datetime, timezone
+        expires_at_iso = datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat()
+        result = supabase.table("sessions").insert({
+            "user_id": user_id,
+            "token": token,
+            "expires_at": expires_at_iso,
+        }).execute()
+        session_id = result.data[0]["id"]
+        print(f"[DB] Created Supabase session #{session_id} for user #{user_id}")
+        return session_id
+
+    # SQLite fallback
+    with get_db() as conn:
+        cur = conn.execute(
+            "INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)",
+            (user_id, token, expires_at),
+        )
+        session_id = cur.lastrowid
+        print(f"[DB] Created SQLite session #{session_id} for user #{user_id}")
+        return session_id
+
+
+def get_session_by_token(token: str) -> Optional[dict[str, Any]]:
+    """
+    Get a valid (non-expired) session by its token.
+    
+    Returns:
+        Session dict with user info, or None if not found/expired
+    """
+    import time
+    now = time.time()
+
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        from datetime import datetime, timezone
+        now_iso = datetime.now(timezone.utc).isoformat()
+        result = supabase.table("sessions") \
+            .select("*, users!inner(id, username, display_name)") \
+            .eq("token", token) \
+            .gt("expires_at", now_iso) \
+            .execute()
+        if result.data:
+            row = result.data[0]
+            return {
+                "id": row["id"],
+                "user_id": row["user_id"],
+                "token": row["token"],
+                "created_at": row["created_at"],
+                "expires_at": row["expires_at"],
+                "user": {
+                    "id": row["users"]["id"],
+                    "username": row["users"]["username"],
+                    "display_name": row["users"]["display_name"],
+                },
+            }
+        return None
+
+    # SQLite fallback
+    with get_db() as conn:
+        row = conn.execute(
+            """SELECT s.*, u.id AS user_id, u.username, u.display_name
+               FROM sessions s
+               JOIN users u ON s.user_id = u.id
+               WHERE s.token = ? AND s.expires_at > ?""",
+            (token, now),
+        ).fetchone()
+        if row:
+            d = dict(row)
+            return {
+                "id": d["id"],
+                "user_id": d["user_id"],
+                "token": d["token"],
+                "created_at": d["created_at"],
+                "expires_at": d["expires_at"],
+                "user": {
+                    "id": d["user_id"],
+                    "username": d["username"],
+                    "display_name": d["display_name"],
+                },
+            }
+        return None
+
+
+def delete_session(token: str) -> bool:
+    """Delete a session by its token. Returns True if deleted."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("sessions").delete().eq("token", token).execute()
+        deleted = len(result.data) > 0
+        if deleted:
+            print(f"[DB] Deleted Supabase session for token")
+        return deleted
+
+    # SQLite fallback
+    with get_db() as conn:
+        cur = conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        deleted = cur.rowcount > 0
+        if deleted:
+            print(f"[DB] Deleted SQLite session")
+        return deleted
+
+
+def delete_expired_sessions() -> int:
+    """Delete all expired sessions. Returns the number deleted."""
+    import time
+    now = time.time()
+
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        from datetime import datetime, timezone
+        now_iso = datetime.now(timezone.utc).isoformat()
+        result = supabase.table("sessions").delete().lt("expires_at", now_iso).execute()
+        deleted = len(result.data)
+        if deleted:
+            print(f"[DB] Cleaned up {deleted} expired Supabase sessions")
+        return deleted
+
+    # SQLite fallback
+    with get_db() as conn:
+        cur = conn.execute("DELETE FROM sessions WHERE expires_at <= ?", (now,))
+        deleted = cur.rowcount
+        if deleted:
+            print(f"[DB] Cleaned up {deleted} expired SQLite sessions")
+        return deleted
 
 
 def create_conversation_for_user(user_id: int, title: str = "New Conversation") -> int:

@@ -486,6 +486,26 @@ body.uigen-body{background:#14121b;color:#e6e0ee;font-family:Arial,sans-serif;mi
 
 .header-user-profile .user-details{text-align:right}
 
+.history-header-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+    border-radius:10px;
+    background:#2b2933;
+    border:1px solid #484555;
+    color:#e6e0ee;
+    text-decoration:none;
+    font-size:16px;
+    transition:all .2s;
+    flex-shrink:0;
+}
+.history-header-btn:hover{
+    border-color:#947dff;
+    background:#373342;
+}
+
 @media (max-width:640px){.app-shell{grid-template-columns:1fr;padding:10px}.sidebar{display:none}.hero{padding:16px}.hero h2{margin-right:0}.auth-actions,.header-user-profile{margin-left:auto}.header-user-profile .user-details{display:none}}
 
 .user-profile .user-name {

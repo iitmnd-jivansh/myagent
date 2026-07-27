@@ -5,8 +5,6 @@ import {
   initAuth,
   isAuthenticated,
   getUser,
-  signIn,
-  signUp,
   signOut as authSignOut,
   getLastConversationId,
   setLastConversationId,
@@ -868,62 +866,11 @@ async function loadConversations() {
 
 // ── Auth UI Logic ──────────────────────────────────────────────────────────
 
-const authModal = document.getElementById("authModal");
 const authActions = document.getElementById("authActions");
-const showSignInBtn = document.getElementById("showSignInBtn");
-const showSignUpBtn = document.getElementById("showSignUpBtn");
-const authCloseBtn = document.getElementById("authCloseBtn");
-const authTabSignIn = document.getElementById("authTabSignIn");
-const authTabSignUp = document.getElementById("authTabSignUp");
-const signInForm = document.getElementById("signInForm");
-const signUpForm = document.getElementById("signUpForm");
-const signInError = document.getElementById("signInError");
-const signUpError = document.getElementById("signUpError");
 const userProfile = document.getElementById("userProfile");
 const signOutBtn = document.getElementById("signOutBtn");
 const userDisplayName = document.getElementById("userDisplayName");
 const userUsername = document.getElementById("userUsername");
-
-/**
- * Show the auth modal.
- */
-function showAuthModal(mode = "signin") {
-  authModal.hidden = false;
-  mode === "signup" ? switchToSignUp() : switchToSignIn();
-}
-
-/**
- * Hide the auth modal.
- */
-function hideAuthModal() {
-  authModal.hidden = true;
-  signInError.style.display = "none";
-  signUpError.style.display = "none";
-}
-
-/**
- * Switch to the Sign In tab.
- */
-function switchToSignIn() {
-  authTabSignIn.classList.add("active");
-  authTabSignUp.classList.remove("active");
-  signInForm.hidden = false;
-  signUpForm.hidden = true;
-  signInError.style.display = "none";
-  signUpError.style.display = "none";
-}
-
-/**
- * Switch to the Sign Up tab.
- */
-function switchToSignUp() {
-  authTabSignUp.classList.add("active");
-  authTabSignIn.classList.remove("active");
-  signUpForm.hidden = false;
-  signInForm.hidden = true;
-  signInError.style.display = "none";
-  signUpError.style.display = "none";
-}
 
 /**
  * Update the UI to reflect the current auth state.
@@ -944,118 +891,11 @@ function updateAuthUI(authed = isAuthenticated()) {
   }
 }
 
-// ── Auth Event Handlers ────────────────────────────────────────────────────
-
-// Show auth modal
-showSignInBtn.addEventListener("click", () => showAuthModal("signin"));
-showSignUpBtn.addEventListener("click", () => showAuthModal("signup"));
-
-// Close auth modal
-authCloseBtn.addEventListener("click", hideAuthModal);
-
-// Close modal when clicking outside
-authModal.addEventListener("click", (e) => {
-  if (e.target === authModal) {
-    hideAuthModal();
-  }
-});
-
-// Tab switching
-authTabSignIn.addEventListener("click", switchToSignIn);
-authTabSignUp.addEventListener("click", switchToSignUp);
-
-// Sign In form submission
-signInForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  signInError.style.display = "none";
-
-  const username = document.getElementById("signInUsername").value.trim();
-  const password = document.getElementById("signInPassword").value;
-
-  if (!username || !password) {
-    signInError.textContent = "Please fill in all fields.";
-    signInError.style.display = "block";
-    return;
-  }
-
-  const submitBtn = signInForm.querySelector(".auth-submit");
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Signing in...";
-
-  try {
-    await signIn(username, password);
-    hideAuthModal();
-    updateAuthUI();
-    addMessage(`Welcome back, ${getUser().display_name || getUser().username}!`, "ai");
-    // Load user's conversations after sign in
-    await loadAndRestoreConversation();
-  } catch (err) {
-    signInError.textContent = err.message;
-    signInError.style.display = "block";
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Sign In";
-  }
-});
-
-// Sign Up form submission
-signUpForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  signUpError.style.display = "none";
-
-  const username = document.getElementById("signUpUsername").value.trim();
-  const displayName = document.getElementById("signUpDisplayName").value.trim();
-  const password = document.getElementById("signUpPassword").value;
-
-  if (!username || !password) {
-    signUpError.textContent = "Please fill in all required fields.";
-    signUpError.style.display = "block";
-    return;
-  }
-
-  if (username.length < 3) {
-    signUpError.textContent = "Username must be at least 3 characters.";
-    signUpError.style.display = "block";
-    return;
-  }
-
-  if (password.length < 4) {
-    signUpError.textContent = "Password must be at least 4 characters.";
-    signUpError.style.display = "block";
-    return;
-  }
-
-  const submitBtn = signUpForm.querySelector(".auth-submit");
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Creating account...";
-
-  try {
-    await signUp(username, password, displayName);
-    hideAuthModal();
-    updateAuthUI();
-    addMessage(`Welcome, ${getUser().display_name || getUser().username}! Your account has been created.`, "ai");
-    // Load user's conversations after sign up
-    await loadAndRestoreConversation();
-  } catch (err) {
-    signUpError.textContent = err.message;
-    signUpError.style.display = "block";
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Create Account";
-  }
-});
-
 // Sign Out
 signOutBtn.addEventListener("click", () => {
   authSignOut();
-  updateAuthUI();
-  addMessage("You have been signed out.", "ai");
-  // Clear conversation state
-  _currentConversationId = null;
-  setLastConversationId(null);
-  messagesDiv.innerHTML = '';
-  addMessage('Hello. I am your local AI assistant.', 'ai');
-  renderConversationList([]);
+  // Redirect to sign in page
+  window.location.replace("signin.html");
 });
 
 // New Chat button
@@ -1101,15 +941,17 @@ async function loadAndRestoreConversation() {
 
 (async function initWithAuth() {
   try {
-    // Check auth state
+    // Check auth state - must be authenticated to use the app
     const authed = await initAuth();
     updateAuthUI(authed);
 
-    if (authed) {
-      console.log("[Auth] User is signed in:", getUser().username);
-    } else {
-      console.log("[Auth] User is not signed in");
+    if (!authed) {
+      console.log("[Auth] No valid session, redirecting to sign in");
+      window.location.replace("signin.html");
+      return;
     }
+
+    console.log("[Auth] User is signed in:", getUser().username);
 
     const health = await checkHealth();
     console.log("Backend connected:", health);
@@ -1120,6 +962,10 @@ async function loadAndRestoreConversation() {
 
   } catch (err) {
     console.warn("Backend not reachable on startup:", err.message);
+    // Even if backend is unreachable, if we have stored auth, let the user in
+    if (!isAuthenticated()) {
+      window.location.replace("signin.html");
+    }
   }
 })();
 

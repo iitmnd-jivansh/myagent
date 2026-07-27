@@ -1,0 +1,123 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign In — MyAgent</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:#14121b;color:#e6e0ee;font-family:Arial,sans-serif;height:100vh;display:flex;align-items:center;justify-content:center}
+        .auth-page{width:100%;max-width:420px;padding:24px}
+        .auth-card{background:#1c1a24;border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:40px 32px}
+        .auth-logo{font-size:28px;font-weight:700;color:#947dff;text-align:center;margin-bottom:8px}
+        .auth-tagline{text-align:center;color:#888;font-size:14px;margin-bottom:32px}
+        .auth-field{margin-bottom:20px}
+        .auth-field label{display:block;font-size:12px;color:#aaa;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+        .auth-field input{width:100%;padding:14px 16px;border-radius:12px;border:1px solid #484555;background:#14121b;color:white;font-size:14px;outline:none;transition:border-color .2s}
+        .auth-field input:focus{border-color:#947dff}
+        .auth-error{background:rgba(147,0,10,.2);border:1px solid #93000a;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#ff8a80;display:none}
+        .auth-submit{width:100%;padding:14px;border:none;border-radius:12px;background:#947dff;color:white;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s}
+        .auth-submit:hover{opacity:.85}
+        .auth-submit:disabled{opacity:.5;cursor:not-allowed}
+        .auth-footer{text-align:center;margin-top:20px;font-size:14px;color:#888}
+        .auth-footer a{color:#947dff;text-decoration:none;font-weight:600}
+        .auth-footer a:hover{text-decoration:underline}
+        .loading-spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:8px}
+        @keyframes spin{to{transform:rotate(360deg)}}
+    </style>
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-card">
+            <div class="auth-logo">MyAgent</div>
+            <div class="auth-tagline">Sign in to your account</div>
+
+            <form id="signInForm">
+                <div class="auth-field">
+                    <label for="signInUsername">Username</label>
+                    <input id="signInUsername" type="text" placeholder="Enter your username" required minlength="3" autocomplete="username" />
+                </div>
+                <div class="auth-field">
+                    <label for="signInPassword">Password</label>
+                    <input id="signInPassword" type="password" placeholder="Enter your password" required minlength="4" autocomplete="current-password" />
+                </div>
+                <div id="signInError" class="auth-error"></div>
+                <button type="submit" class="auth-submit" id="signInBtn">Sign In</button>
+            </form>
+
+            <div class="auth-footer">
+                Don't have an account? <a href="signup.html">Create one</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        const form = document.getElementById('signInForm');
+        const usernameInput = document.getElementById('signInUsername');
+        const passwordInput = document.getElementById('signInPassword');
+        const errorEl = document.getElementById('signInError');
+        const submitBtn = document.getElementById('signInBtn');
+
+        // If already authenticated, redirect to main app
+        try {
+            const raw = localStorage.getItem('myagent_auth');
+            if (raw) {
+                const auth = JSON.parse(raw);
+                if (auth && auth.token) {
+                    window.location.replace('index.html');
+                }
+            }
+        } catch (e) {}
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorEl.style.display = 'none';
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!username || !password) {
+                errorEl.textContent = 'Please fill in all fields.';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading-spinner"></span>Signing in...';
+
+            try {
+                const response = await fetch(API_BASE + '/api/auth/signin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                });
+
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.detail || data.error || 'Sign in failed');
+                }
+
+                if (!data.token || !data.user) {
+                    throw new Error('Invalid response from server');
+                }
+
+                // Store auth data
+                localStorage.setItem('myagent_auth', JSON.stringify({
+                    token: data.token,
+                    user: data.user,
+                }));
+
+                // Redirect to main app
+                window.location.replace('index.html');
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign In';
+            }
+        });
+    </script>
+</body>
+</html>

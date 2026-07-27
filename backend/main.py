@@ -8,6 +8,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from fastapi import FastAPI, UploadFile, File, Form, Query, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -60,7 +61,9 @@ from auth import (
     create_token,
     get_current_user,
     require_current_user,
+    security,
 )
+from database import delete_session
 
 load_dotenv()
 
@@ -819,6 +822,30 @@ async def get_me(user: Optional[dict] = Depends(get_current_user)):
             "created_at": full_user["created_at"],
         },
     }
+
+
+@app.post("/api/auth/signout")
+async def signout(
+    user: dict = Depends(require_current_user),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+):
+    """Sign out the current user by deleting their session from the database."""
+    print("=" * 60)
+    print(f"[API] POST /api/auth/signout — Request received")
+    print(f"[API]   User #{user['user_id']} signing out")
+    print("=" * 60)
+    
+    # Extract the raw token and delete the session from the database
+    if credentials is not None:
+        deleted = delete_session(credentials.credentials)
+        if deleted:
+            print(f"[API]   Session deleted for user #{user['user_id']}")
+        else:
+            print(f"[API]   No session found to delete")
+    
+    print(f"[API]   User #{user['user_id']} signed out successfully")
+    print(f"[API] POST /api/auth/signout — Response sent")
+    return {"status": "signed_out"}
 
 
 # ── LiveKit Cloud Integration ──────────────────────────────────────────────

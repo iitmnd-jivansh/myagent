@@ -3,6 +3,32 @@
 -- Run this SQL in your Supabase project's SQL Editor
 -- =============================================================
 
+-- ── Users ──────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS users (
+    id              BIGSERIAL PRIMARY KEY,
+    username        TEXT NOT NULL UNIQUE,
+    display_name    TEXT NOT NULL DEFAULT '',
+    password_hash   TEXT NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+
+-- ── Sessions ──────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS sessions (
+    id              BIGSERIAL PRIMARY KEY,
+    user_id         BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token           TEXT NOT NULL UNIQUE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at      TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+ALTER TABLE sessions DISABLE ROW LEVEL SECURITY;
+
 -- ── Migration: Add user_id to conversations (safe to re-run) ──
 DO $$
 BEGIN
@@ -65,7 +91,6 @@ CREATE TABLE IF NOT EXISTS api_cache (
 
 CREATE INDEX IF NOT EXISTS idx_api_cache_key
     ON api_cache(cache_key);
-
 CREATE INDEX IF NOT EXISTS idx_api_cache_expires
     ON api_cache(expires_at);
 ALTER TABLE api_cache DISABLE ROW LEVEL SECURITY;

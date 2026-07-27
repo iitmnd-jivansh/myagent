@@ -216,8 +216,23 @@ async function submitAuth(endpoint, payload, fallbackError) {
 
 /**
  * Sign out the current user.
- * Clears all stored auth data from localStorage.
+ * Attempts to delete the session from the backend, then clears local storage.
  */
-export function signOut() {
+export async function signOut() {
+  // Try to notify the backend to delete the session
+  const token = getToken();
+  if (token) {
+    try {
+      await fetch(`${API_BASE}/api/auth/signout`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch (e) {
+      // Ignore network errors — just clear locally
+      console.warn("[Auth] Backend sign-out request failed:", e);
+    }
+  }
   _clearStoredAuth();
 }
