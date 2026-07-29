@@ -1,5 +1,5 @@
 import { avatar } from './avatar/avatar.js';
-import { checkHealth, sendChatMessageV2, generateSpeech, transcribeAudio, getUserConversations, getConversationMessages } from './api.js';
+import { checkHealth, sendChatMessageV2, sendChatMessageWithAttachment, generateSpeech, transcribeAudio, getUserConversations, getConversationMessages } from './api.js';
 import { subscribeToMessages } from './supabase_client.js';
 import {
   initAuth,
@@ -49,6 +49,52 @@ let audioChunks = [];
 let isRecording = false;
 
 let currentLanguage = "en";
+
+// ── File Attachment State ───────────────────────────────────────────────────
+let _attachedFile = null;
+const fileInput = document.getElementById("fileInput");
+const attachBtn = document.getElementById("attachBtn");
+const filePreviewArea = document.getElementById("filePreviewArea");
+const filePreviewName = document.getElementById("filePreviewName");
+const filePreviewClear = document.getElementById("filePreviewClear");
+
+/**
+ * Handle file selection from the file picker.
+ */
+if (attachBtn && fileInput) {
+  attachBtn.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setAttachedFile(file);
+    }
+  });
+
+  // Clear button
+  if (filePreviewClear) {
+    filePreviewClear.addEventListener("click", clearAttachedFile);
+  }
+}
+
+function setAttachedFile(file) {
+  _attachedFile = file;
+  if (filePreviewArea && filePreviewName) {
+    filePreviewArea.style.display = "block";
+    const isImage = file.type.startsWith("image/");
+    const icon = isImage ? "🖼️" : "📄";
+    filePreviewName.textContent = `${icon} ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  }
+}
+
+function clearAttachedFile() {
+  _attachedFile = null;
+  if (fileInput) fileInput.value = "";
+  if (filePreviewArea) filePreviewArea.style.display = "none";
+  if (filePreviewName) filePreviewName.textContent = "";
+}
 
 function clearVisualizer() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -595,13 +641,59 @@ function subscribeToConversation(conversationId) {
   });
 }
 
-// ── Send Message (v2 with conversation persistence) ────────────────────────
+// ── Send Message (v2 with conversation persistence + file attachments) ─────
+
+/**
+ * Render a file attachment inside a message bubble.
+ * Shows image thumbnails inline, document cards for PDFs/DOCX/TXT.
+ */
+function addFileMessage(type, file) {
+  const div = document.createElement("div");
+  div.className = `message ${type}`;
+
+  if (file && file.type.startsWith("image/")) {
+    // Render image inline
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = document.createElement("img");
+      img.src = e.target.result;
+      img.className = "message-image";
+      img.alt = file.name;
+      img.style.maxWidth = "100%";
+      img.style.maxHeight = "300px";
+      img.style.borderRadius = "12px";
+      img.style.display = "block";
+      div.appendChild(img);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    };
+    reader.readAsDataURL(file);
+    // Also show filename
+    const nameSpan = document.createElement("div");
+    nameSpan.className = "message-file-label";
+    nameSpan.textContent = `🖼️ ${file.name}`;
+    div.appendChild(nameSpan);
+  } else if (file) {
+    // Render document/file card
+    const fileCard = document.createElement("div");
+    fileCard.className = "message-file-card";
+    fileCard.innerHTML = `
+      <span class="message-file-icon">📄</span>
+      <span class="message-file-name">${escapeHtml(file.name)}</span>
+      <span class="message-file-size">${(file.size / 1024).toFixed(1)} KB</span>
+    `;
+    div.appendChild(fileCard);
+  }
+
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  return div;
+}
 
 async function sendMessage() {
 
   const message = input.value.trim();
 
-  if (!message) return;
+  if (!message && !_attachedFile) return;
 
   if (currentAudio) {
     currentAudio.pause();
@@ -612,7 +704,13 @@ async function sendMessage() {
     }
   }
 
-  addMessage(message, "user");
+  // Show user message with file attachment preview
+  if (message) {
+    addMessage(message, "user");
+  }
+  if (_attachedFile) {
+    addFileMessage("user", _attachedFile);
+  }
 
   input.value = "";
 
@@ -620,8 +718,20 @@ async function sendMessage() {
   setAgentState("thinking");
 
   try {
-
-    const data = await sendChatMessageV2(message, currentLanguage, _currentConversationId);
+    let data;
+    if (_attachedFile) {
+      // Use multipart upload with file
+      data = await sendChatMessageWithAttachment(
+        message || "See attached file",
+        currentLanguage,
+        _currentConversationId,
+        _attachedFile
+      );
+      clearAttachedFile();
+    } else {
+      // Standard text-only message
+      data = await sendChatMessageV2(message, currentLanguage, _currentConversationId);
+    }
 
     typing.style.display = "none";
 

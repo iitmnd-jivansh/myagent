@@ -138,7 +138,7 @@ def get_tool_registry() -> dict[str, ToolDefinition]:
         "search": ToolDefinition(
             name="search",
             description="Search the web through the SearXNG REST integration.",
-            keywords=("search", "web search"),
+            keywords=("search", "web search", "look up", "google", "find online", "browse", "internet", "search for", "search about"),
             build_params=_search_params,
             execute=_execute_search_tool,
         ),
@@ -324,34 +324,101 @@ def execute_knowledge_query(query: str) -> IntegrationResult:
     )
 
 
-def execute_rag_chat(query: str, language: str = "en") -> IntegrationResult:
-    from rag import ask_question
+def execute_rag_chat(query: str, language: str = "en", file_info: dict = None) -> IntegrationResult:
+    """Execute RAG chat with optional file attachment.
+    
+    If a file is attached:
+      - Images are sent to the LLM vision model for description
+      - Documents (PDF/DOCX/TXT) have their text extracted and added as context
+    Then both the original query and file content are sent to the configured LLM.
+    
+    Uses the unified llm_client which respects the user's provider preference
+    (llm_provider) and API key (llm_api_key) from user_preferences.
+    """
+    from llm_client import llm_chat, llm_vision
 
     _print_header("RAG chat integration selected")
-    print(f"[INTEGRATION]   Tool: ask_question")
+    print(f"[INTEGRATION]   Tool: LLM (multi-provider)")
     print(f"[INTEGRATION]   Input query: '{query}'")
     print(f"[INTEGRATION]   Language: '{language}'")
+    print(f"[INTEGRATION]   File attached: {file_info is not None}")
 
-    rag_query = query
-    if language == "hi":
-        rag_query = "उत्तर केवल हिन्दी में दें.\n\n" + query
-        print("[INTEGRATION]   Applied Hindi response instruction")
-
-    response = ask_question(rag_query, language)
-
-    _print_footer("RAG chat integration", response)
+    if file_info and file_info.get("type") == "image":
+        # Use vision model to describe the image
+        print(f"[INTEGRATION]   Processing attached image...")
+        vision_prompt = f"Describe this image in detail. User query: {query}" if query else "Describe this image in detail."
+        description = llm_vision(
+            file_info["content"],
+            vision_prompt,
+            mime_type=file_info.get("mime", "image/jpeg"),
+        )
+        print(f"[INTEGRATION]   Image description: {description[:200]}...")
+        
+        # Build the final prompt with image context
+        augmented_query = f"[Image Description: {description}]\n\nUser message: {query}" if query else f"[Image Description: {description}]"
+        
+        # Build language instruction
+        if language == "hi":
+            system_prompt = "Answer in Hindi. Provide a helpful response based on the image description and user query."
+        else:
+            system_prompt = "You are a helpful AI assistant. Answer based on the image description and user query."
+        
+    elif file_info and file_info.get("type") == "document":
+        # Use extracted text from document as context
+        doc_text = file_info["content"]
+        # Truncate very long documents to prevent context overflow
+        if len(doc_text) > 15000:
+            doc_text = doc_text[:15000] + "\n\n[Document truncated due to length]"
+        
+        print(f"[INTEGRATION]   Document text extracted: {len(doc_text)} chars")
+        augmented_query = f"[Document Content from '{file_info['filename']}':\n{doc_text}\n]\n\nUser message: {query}" if query else f"[Document Content from '{file_info['filename']}':\n{doc_text}\n]"
+        
+        if language == "hi":
+            system_prompt = "Answer in Hindi. Use the provided document content to answer the user's question."
+        else:
+            system_prompt = "You are a helpful AI assistant. Use the provided document content to answer the user's question."
+    
+    else:
+        # No file - use RAG with the configured LLM
+        from rag import ask_question
+        response = ask_question(query, language)
+        _print_footer("RAG chat integration", response)
+        return IntegrationResult(
+            integration="rag",
+            response=response,
+            metadata={"query": query, "language": language},
+        )
+    
+    # Send to the configured LLM (respects user's provider preference)
+    lang_instruction = "Answer only in Hindi." if language == "hi" else "Answer only in English."
+    
+    messages = [
+        {"role": "system", "content": system_prompt + " " + lang_instruction},
+        {"role": "user", "content": augmented_query}
+    ]
+    
+    response = llm_chat(messages)
+    
+    _print_footer("RAG chat integration (LLM)", response)
     return IntegrationResult(
         integration="rag",
         response=response,
-        metadata={"query": query, "language": language},
+        metadata={"query": query, "language": language, "file_type": file_info.get("type") if file_info else None},
     )
 
 
-def execute_chat_request(message: str, language: str = "en") -> IntegrationResult:
+def execute_chat_request(message: str, language: str = "en", file_info: dict = None) -> IntegrationResult:
     query = message.strip()
     _print_header("Chat integration router")
     print(f"[INTEGRATION]   Incoming message: '{query}'")
     print(f"[INTEGRATION]   Language: '{language}'")
+    print(f"[INTEGRATION]   File info: {file_info is not None}")
+    print("=" * 60)
+
+    # If there's a file attachment, always use RAG with Groq (bypass keyword routing)
+    if file_info:
+        print(f"[INTEGRATION]   File attached — using Groq multimodal RAG")
+        return execute_rag_chat(query, language, file_info)
 
     decision = decide_chat_tool(query, language)
     print(f"[INTEGRATION]   Agent router selected tool: {decision.tool_name}")

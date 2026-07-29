@@ -115,6 +115,32 @@ export async function sendChatMessageV2(message, language = "en", conversationId
 }
 
 /**
+ * Send a chat message with an optional file attachment (multipart/form-data).
+ * Supports images, PDFs, DOCX, and text files.
+ * 
+ * @param {string} message - User message text
+ * @param {string} language - Language code ("en" or "hi")
+ * @param {number|null} conversationId - Conversation ID to continue, or null for new
+ * @param {File|null} file - File object to attach (image, PDF, DOCX, TXT, etc.)
+ * @returns {Promise<object>} Response with conversation_id, response, ui, conversation, last_preview
+ */
+export async function sendChatMessageWithAttachment(message, language = "en", conversationId = null, file = null) {
+  const formData = new FormData();
+  formData.append("message", message);
+  formData.append("language", language);
+  if (conversationId) {
+    formData.append("conversation_id", conversationId);
+  }
+  if (file) {
+    formData.append("file", file);
+  }
+  return request("/api/v2/chat", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+/**
  * Get current weather for a city.
  * @param {string} city - City name
  * @returns {Promise<object>} Response with `city` and `response` fields

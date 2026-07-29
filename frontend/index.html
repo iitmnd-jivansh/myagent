@@ -112,11 +112,23 @@
 
             </div>
 
+            <div id="filePreviewArea" class="file-preview-area" style="display:none;">
+                <div class="file-preview-chip">
+                    <span id="filePreviewName" class="file-preview-name"></span>
+                    <button id="filePreviewClear" class="file-preview-clear" title="Remove file">✕</button>
+                </div>
+            </div>
+
             <div class="input-area">
 
                 <button id="recordBtn" onclick="toggleRecording()">
                     🎤
                 </button>
+
+                <button id="attachBtn" class="attach-btn" title="Attach file or image">
+                    📎
+                </button>
+                <input id="fileInput" type="file" accept="image/*,.pdf,.docx,.txt,.csv,.md" style="display:none" />
 
                 <input id="messageInput" type="text" placeholder="Ask something..." />
 

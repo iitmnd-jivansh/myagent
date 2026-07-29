@@ -12,7 +12,147 @@
         .history-header h1{font-size:20px;flex:1}
         .history-header .back-link{color:#947dff;text-decoration:none;font-size:14px;font-weight:600}
         .history-header .back-link:hover{text-decoration:underline}
-        .history-main{flex:1;padding:24px;max-width:900px;margin:0 auto;width:100%}
+
+        /* ── Two-column layout ──────────────────────────────────────── */
+        .history-body {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* ── Left Sidebar (Settings) ────────────────────────────────── */
+        .history-sidebar {
+            width: 320px;
+            flex-shrink: 0;
+            background: #1c1a24;
+            border-right: 1px solid rgba(255,255,255,.08);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .history-sidebar h2 {
+            font-size: 18px;
+            color: #e6e0ee;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-section {
+            background: rgba(255,255,255,.03);
+            border: 1px solid rgba(255,255,255,.06);
+            border-radius: 16px;
+            padding: 16px;
+        }
+        .sidebar-section h3 {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 14px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        .sidebar-field {
+            margin-bottom: 14px;
+        }
+        .sidebar-field:last-child {
+            margin-bottom: 0;
+        }
+        .sidebar-field label {
+            display: block;
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        .sidebar-field input, .sidebar-field select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #484555;
+            background: #14121b;
+            color: white;
+            font-size: 13px;
+            outline: none;
+            transition: border-color .2s;
+            font-family: inherit;
+        }
+        .sidebar-field input:focus, .sidebar-field select:focus {
+            border-color: #947dff;
+        }
+        .sidebar-field select option {
+            background: #1c1a24;
+            color: #e6e0ee;
+        }
+        .sidebar-error {
+            background: rgba(147,0,10,.2);
+            border: 1px solid #93000a;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: #ff8a80;
+            display: none;
+        }
+        .sidebar-success {
+            background: rgba(0,147,10,.2);
+            border: 1px solid #00a30a;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: #80ff8a;
+            display: none;
+        }
+        .sidebar-btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 10px;
+            background: #947dff;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity .2s;
+            font-family: inherit;
+        }
+        .sidebar-btn:hover {
+            opacity: .85;
+        }
+        .sidebar-btn:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+        .sidebar-btn-secondary {
+            background: #2b2933;
+            border: 1px solid #484555;
+            color: #e6e0ee;
+            margin-top: 6px;
+        }
+        .sidebar-btn-secondary:hover {
+            background: #373342;
+        }
+        .provider-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: rgba(148,125,255,.1);
+            border-radius: 8px;
+            font-size: 11px;
+            color: #947dff;
+            margin-bottom: 12px;
+        }
+
+        /* ── Right Main Content (Conversations) ─────────────────────── */
+        .history-main {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            min-width: 0;
+        }
         .history-title{font-size:24px;font-weight:700;margin-bottom:24px;color:#e6e0ee}
         .history-stats{font-size:13px;color:#888;margin-bottom:16px}
         .history-empty{text-align:center;padding:60px 20px;color:#666}
@@ -32,7 +172,14 @@
         .history-delete-btn{padding:8px 14px;border:1px solid rgba(147,0,10,.4);border-radius:10px;background:rgba(147,0,10,.1);color:#ff8a80;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;flex-shrink:0}
         .history-delete-btn:hover{background:rgba(147,0,10,.3);border-color:#93000a}
         .history-delete-btn:disabled{opacity:.4;cursor:not-allowed}
-        @media(max-width:600px){.history-main{padding:16px}.history-item{padding:12px 16px;flex-wrap:wrap}.history-delete-btn{padding:6px 12px}}
+
+        @media(max-width:768px){
+            .history-body{flex-direction:column}
+            .history-sidebar{width:100%;border-right:none;border-bottom:1px solid rgba(255,255,255,.08);max-height:50vh}
+            .history-main{padding:16px}
+            .history-item{padding:12px 16px;flex-wrap:wrap}
+            .history-delete-btn{padding:6px 12px}
+        }
     </style>
 </head>
 <body>
@@ -41,12 +188,65 @@
         <a href="/" class="back-link">← Back to Chat</a>
     </div>
 
-    <div class="history-main">
-        <div class="history-title">Your Conversations</div>
-        <div class="history-stats" id="historyStats"></div>
-        <div id="historyError" class="history-error"></div>
-        <div id="historyLoading" class="history-loading">Loading conversations...</div>
-        <div id="historyList" class="history-list"></div>
+    <div class="history-body">
+
+        <!-- ── Left Sidebar: Settings ──────────────────────────────── -->
+        <aside class="history-sidebar">
+            <h2>⚙️ Settings</h2>
+
+            <!-- Change Password Section -->
+            <div class="sidebar-section">
+                <h3>🔑 Change Password</h3>
+                <div id="sidebarPasswordError" class="sidebar-error"></div>
+                <div id="sidebarPasswordSuccess" class="sidebar-success"></div>
+                <div class="sidebar-field">
+                    <label for="currentPassword">Current Password</label>
+                    <input id="currentPassword" type="password" placeholder="Enter current password" autocomplete="current-password" />
+                </div>
+                <div class="sidebar-field">
+                    <label for="newPassword">New Password</label>
+                    <input id="newPassword" type="password" placeholder="Min 4 characters" autocomplete="new-password" />
+                </div>
+                <div class="sidebar-field">
+                    <label for="confirmPassword">Confirm New Password</label>
+                    <input id="confirmPassword" type="password" placeholder="Re-enter new password" autocomplete="new-password" />
+                </div>
+                <button id="changePasswordBtn" class="sidebar-btn">Change Password</button>
+            </div>
+
+            <!-- LLM Provider Section -->
+            <div class="sidebar-section">
+                <h3>🤖 LLM Provider</h3>
+                <div id="sidebarLLMError" class="sidebar-error"></div>
+                <div id="sidebarLLMSuccess" class="sidebar-success"></div>
+                <div id="currentProviderIndicator" class="provider-indicator">🟢 Using: Groq</div>
+                <div class="sidebar-field">
+                    <label for="llmProvider">Provider</label>
+                    <select id="llmProvider">
+                        <option value="groq">Groq</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic (Claude)</option>
+                        <option value="gemini">Google Gemini</option>
+                    </select>
+                </div>
+                <div class="sidebar-field">
+                    <label for="llmApiKey">API Key</label>
+                    <input id="llmApiKey" type="password" placeholder="Enter your API key" />
+                </div>
+                <button id="saveLLMBtn" class="sidebar-btn">Save LLM Configuration</button>
+                <button id="resetLLMBtn" class="sidebar-btn sidebar-btn-secondary">Reset to Default (Groq / .env)</button>
+            </div>
+        </aside>
+
+        <!-- ── Right Main: Conversations ───────────────────────────── -->
+        <main class="history-main">
+            <div class="history-title">Your Conversations</div>
+            <div class="history-stats" id="historyStats"></div>
+            <div id="historyError" class="history-error"></div>
+            <div id="historyLoading" class="history-loading">Loading conversations...</div>
+            <div id="historyList" class="history-list"></div>
+        </main>
+
     </div>
 
     <script>
@@ -178,7 +378,6 @@
         }
 
         function openConversation(convId) {
-            // Store the conversation ID and redirect to main app
             try {
                 localStorage.setItem('myagent_last_conversation', String(convId));
             } catch (e) {}
@@ -189,7 +388,6 @@
             const btn = document.querySelector(`.history-delete-btn[data-conv-id="${convId}"]`);
             if (!btn) return;
 
-            // Confirm
             if (!confirm('Delete this conversation and all its messages?')) return;
 
             btn.disabled = true;
@@ -208,7 +406,6 @@
                     throw new Error('Failed to delete');
                 }
 
-                // Remove the item from the DOM
                 const item = btn.closest('.history-item');
                 if (item) {
                     item.style.transition = 'all .3s';
@@ -217,7 +414,6 @@
                     setTimeout(() => item.remove(), 300);
                 }
 
-                // Update stats
                 const remaining = document.querySelectorAll('.history-item').length - 1;
                 historyStats.textContent = `${remaining} conversation${remaining !== 1 ? 's' : ''}`;
 
@@ -230,8 +426,234 @@
             }
         }
 
-        // Load conversations on page load
+        // ── Sidebar Settings Logic ───────────────────────────────────
+
+        const currentProviderIndicator = document.getElementById('currentProviderIndicator');
+
+        // Password fields
+        const currentPasswordInput = document.getElementById('currentPassword');
+        const newPasswordInput = document.getElementById('newPassword');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const changePasswordBtn = document.getElementById('changePasswordBtn');
+        const sidebarPasswordError = document.getElementById('sidebarPasswordError');
+        const sidebarPasswordSuccess = document.getElementById('sidebarPasswordSuccess');
+
+        // LLM fields
+        const llmProviderSelect = document.getElementById('llmProvider');
+        const llmApiKeyInput = document.getElementById('llmApiKey');
+        const saveLLMBtn = document.getElementById('saveLLMBtn');
+        const resetLLMBtn = document.getElementById('resetLLMBtn');
+        const sidebarLLMError = document.getElementById('sidebarLLMError');
+        const sidebarLLMSuccess = document.getElementById('sidebarLLMSuccess');
+
+        // Load LLM config on page load
+        async function loadLLMConfig() {
+            try {
+                const token = getToken();
+                const response = await fetch(API_BASE + '/api/preferences', {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const prefs = data.preferences || {};
+
+                const provider = prefs.llm_provider || 'groq';
+                llmProviderSelect.value = provider;
+                llmApiKeyInput.value = prefs.llm_api_key || '';
+                updateProviderIndicator(provider);
+            } catch (err) {
+                console.error('Failed to load LLM config:', err);
+            }
+        }
+
+        function updateProviderIndicator(provider) {
+            const names = {
+                groq: 'Groq',
+                openai: 'OpenAI',
+                anthropic: 'Anthropic (Claude)',
+                gemini: 'Google Gemini',
+            };
+            currentProviderIndicator.textContent = `🟢 Using: ${names[provider] || provider}`;
+        }
+
+        // ── Change Password ───────────────────────────────────────────
+
+        async function changePassword() {
+            sidebarPasswordError.style.display = 'none';
+            sidebarPasswordSuccess.style.display = 'none';
+
+            const currentPassword = currentPasswordInput.value;
+            const newPassword = newPasswordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                sidebarPasswordError.textContent = 'Please fill in all fields.';
+                sidebarPasswordError.style.display = 'block';
+                return;
+            }
+
+            if (newPassword.length < 4) {
+                sidebarPasswordError.textContent = 'New password must be at least 4 characters.';
+                sidebarPasswordError.style.display = 'block';
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                sidebarPasswordError.textContent = 'New passwords do not match.';
+                sidebarPasswordError.style.display = 'block';
+                return;
+            }
+
+            changePasswordBtn.disabled = true;
+            changePasswordBtn.textContent = 'Changing...';
+
+            try {
+                const token = getToken();
+                const response = await fetch(API_BASE + '/api/auth/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword,
+                    }),
+                });
+
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.detail || data.error || 'Failed to change password');
+                }
+
+                sidebarPasswordSuccess.textContent = '✅ Password changed successfully!';
+                sidebarPasswordSuccess.style.display = 'block';
+                currentPasswordInput.value = '';
+                newPasswordInput.value = '';
+                confirmPasswordInput.value = '';
+            } catch (err) {
+                sidebarPasswordError.textContent = err.message;
+                sidebarPasswordError.style.display = 'block';
+            } finally {
+                changePasswordBtn.disabled = false;
+                changePasswordBtn.textContent = 'Change Password';
+            }
+        }
+
+        changePasswordBtn.addEventListener('click', changePassword);
+
+        // ── LLM Configuration ─────────────────────────────────────────
+
+        async function saveLLMConfig() {
+            sidebarLLMError.style.display = 'none';
+            sidebarLLMSuccess.style.display = 'none';
+
+            const provider = llmProviderSelect.value;
+            const apiKey = llmApiKeyInput.value.trim();
+
+            saveLLMBtn.disabled = true;
+            saveLLMBtn.textContent = 'Saving...';
+
+            try {
+                const token = getToken();
+
+                // Save provider
+                let response = await fetch(API_BASE + '/api/preferences', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ key: 'llm_provider', value: provider }),
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || 'Failed to save provider');
+                }
+
+                // Save API key (if provided)
+                if (apiKey) {
+                    response = await fetch(API_BASE + '/api/preferences', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({ key: 'llm_api_key', value: apiKey }),
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json().catch(() => ({}));
+                        throw new Error(errData.detail || 'Failed to save API key');
+                    }
+                }
+
+                updateProviderIndicator(provider);
+                sidebarLLMSuccess.textContent = '✅ LLM configuration saved!';
+                sidebarLLMSuccess.style.display = 'block';
+            } catch (err) {
+                sidebarLLMError.textContent = err.message;
+                sidebarLLMError.style.display = 'block';
+            } finally {
+                saveLLMBtn.disabled = false;
+                saveLLMBtn.textContent = 'Save LLM Configuration';
+            }
+        }
+
+        async function resetLLMConfig() {
+            sidebarLLMError.style.display = 'none';
+            sidebarLLMSuccess.style.display = 'none';
+
+            resetLLMBtn.disabled = true;
+            resetLLMBtn.textContent = 'Resetting...';
+
+            try {
+                const token = getToken();
+
+                // Reset provider to groq
+                await fetch(API_BASE + '/api/preferences', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ key: 'llm_provider', value: 'groq' }),
+                });
+
+                // Clear API key
+                await fetch(API_BASE + '/api/preferences', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ key: 'llm_api_key', value: '' }),
+                });
+
+                llmProviderSelect.value = 'groq';
+                llmApiKeyInput.value = '';
+                updateProviderIndicator('groq');
+                sidebarLLMSuccess.textContent = '✅ Reset to default (Groq / .env key).';
+                sidebarLLMSuccess.style.display = 'block';
+            } catch (err) {
+                sidebarLLMError.textContent = err.message;
+                sidebarLLMError.style.display = 'block';
+            } finally {
+                resetLLMBtn.disabled = false;
+                resetLLMBtn.textContent = 'Reset to Default (Groq / .env)';
+            }
+        }
+
+        saveLLMBtn.addEventListener('click', saveLLMConfig);
+        resetLLMBtn.addEventListener('click', resetLLMConfig);
+
+        // Load conversations and LLM config on page load
         loadConversations();
+        loadLLMConfig();
     </script>
 </body>
 </html>

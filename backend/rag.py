@@ -16,6 +16,7 @@ SIMILARITY_THRESHOLD = 320
 chat_history = []
 
 def ask_question(query, language="en"):
+    global chat_history
     print("=" * 60)
     print(f"[RAG] ask_question() called")
     print(f"[RAG]   Query: '{query}'")
@@ -83,7 +84,8 @@ You are a helpful AI assistant.
 
 {language_instruction}
 
-Answer ONLY using the provided context.
+Use the provided context only if it is relevant to the question.
+If the context is not relevant, answer from your general knowledge.
 
 Context:
 {context}
@@ -93,35 +95,32 @@ Question:
 """
     else:
         print(f"[RAG]   Step 3/6: KB similarity too low (distance={best_distance:.3f} >= {SIMILARITY_THRESHOLD})")
-        print(f"[RAG]   Falling back to web search via SearXNG...")
+        print(f"[RAG]   KB not relevant — using Groq LLM directly with its own knowledge")
 
-        web_answer = search_web(query)
+        # Use Groq LLM directly — no web search fallback needed with a large model
+        from groq_client import groq_chat
 
-        context = web_answer if web_answer else "No information found."
+        system_msg = f"You are a helpful AI assistant. {language_instruction.strip()}"
+        messages = [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": query}
+        ]
+        groq_response = groq_chat(messages)
+        print(f"[RAG] ✅ Groq response received ({len(groq_response)} chars)")
 
-        if web_answer:
-            print(f"[RAG]   ✅ Web search successful ({len(web_answer)} chars of information)")
-        else:
-            print(f"[RAG]   ⚠️ Web search returned no results")
+        # Update chat history
+        chat_history.append({"role": "user", "content": query})
+        chat_history.append({"role": "assistant", "content": groq_response})
 
-        prompt = f"""
-You are a helpful AI assistant.
+        if len(chat_history) > 20:
+            chat_history = chat_history[-20:]
 
-{language_instruction}
-
-Use the following web information
-to answer the question.
-
-Web Information:
-{context}
-
-Question:
-{query}
-"""
+        print(f"[RAG] ✅ ask_question() completed successfully (Groq direct)")
+        print("=" * 60)
+        return groq_response
 
     # Step 4: Build conversation history
     print(f"[RAG]   Step 4/6: Building conversation context...")
-    global chat_history
     print(f"[RAG]   Chat history entries: {len(chat_history)} (max 20)")
 
     messages = []
@@ -134,19 +133,14 @@ Question:
     })
     print(f"[RAG]   Total messages sent to LLM: {len(messages)}")
 
-    # Step 5: Call Ollama LLM
-    model_name = "qwen3.5:4b"
-    print(f"[RAG]   Step 5/6: Calling Ollama model '{model_name}'...")
+    # Step 5: Call Groq Qwen LLM
+    from groq_client import groq_chat
+
+    print(f"[RAG]   Step 5/6: Calling Groq Qwen model...")
     print(f"[RAG]   Prompt length: {len(prompt)} chars")
     print(f"[RAG]   Waiting for LLM response...")
 
-    response = ollama.chat(
-        model=model_name,
-        messages=messages,
-        think=False
-    )
-
-    content = response["message"]["content"]
+    content = groq_chat(messages)
     print(f"[RAG]   ✅ LLM responded ({len(content)} chars)")
     print(f"[RAG]   Response preview: \"{content[:200]}...\"")
     print(f"[RAG]   Full response ({len(content.split())} words):")

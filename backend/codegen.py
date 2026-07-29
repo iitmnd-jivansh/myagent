@@ -32,9 +32,9 @@ def generate_ui(prompt: str) -> str:
     try:
         client = Groq(api_key=api_key)
 
-        print(f"[CODEGEN]   Calling Groq API (model: llama-3.3-70b-versatile)...")
+        print(f"[CODEGEN]   Calling Groq API (model: qwen/qwen3.6-27b)...")
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3.6-27b",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},

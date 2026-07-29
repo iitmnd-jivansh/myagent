@@ -138,13 +138,13 @@ async def entrypoint(ctx: JobContext):
     # Configure pipeline
     print("[LIVEKIT-AGENT]   Configuring agent pipeline:")
     print("[LIVEKIT-AGENT]     STT: Deepgram")
-    print("[LIVEKIT-AGENT]     LLM: llama-3.3-70b-versatile (via Groq)")
+    print("[LIVEKIT-AGENT]     LLM: qwen/qwen3.6-27b (via Groq)")
     print("[LIVEKIT-AGENT]     TTS: Deepgram (aura-asteria-en)")
 
     session = AgentSession(
         stt=deepgram.STT(),
         llm=openai.LLM(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3.6-27b",
             api_key=os.getenv("GROQ_API_KEY"),
             base_url="https://api.groq.com/openai/v1",
         ),

@@ -150,8 +150,8 @@ export async function initAuth() {
     return false;
   } catch (e) {
     // Backend unreachable — fall back to stored token
-    console.warn("[Auth] Backend unreachable during init", e);
-    return false;
+    console.warn("[Auth] Backend unreachable during init, using stored token", e);
+    return true;
   }
 }
 

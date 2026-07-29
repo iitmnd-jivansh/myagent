@@ -692,6 +692,30 @@ def get_user_by_id(user_id: int) -> Optional[dict[str, Any]]:
         return dict(row) if row else None
 
 
+def update_user_password(user_id: int, new_password_hash: str) -> bool:
+    """Update a user's password hash. Returns True if successful."""
+    if is_supabase_enabled():
+        supabase = get_supabase()
+        result = supabase.table("users").update({
+            "password_hash": new_password_hash,
+        }).eq("id", user_id).execute()
+        updated = len(result.data) > 0
+        if updated:
+            print(f"[DB] Updated password for user #{user_id} (Supabase)")
+        return updated
+
+    # SQLite fallback
+    with get_db() as conn:
+        cur = conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (new_password_hash, user_id),
+        )
+        updated = cur.rowcount > 0
+        if updated:
+            print(f"[DB] Updated password for user #{user_id} (SQLite)")
+        return updated
+
+
 # ────────────────────────────────────────────────────────────────
 # Sessions (Supabase + SQLite fallback)
 # ────────────────────────────────────────────────────────────────

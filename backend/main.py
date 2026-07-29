@@ -7,7 +7,7 @@ from typing import Any, Optional
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from fastapi import FastAPI, UploadFile, File, Form, Query, Depends, HTTPException, status
+from fastapi import FastAPI, UploadFile, File, Form, Query, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -18,6 +18,7 @@ from stt import transcribe_audio
 from tts import generate_speech
 from genui import build_genui_response
 from codegen import generate_ui as codegen_ui
+from groq_client import strip_thinking
 
 from integrations import (
     execute_chat_request,
@@ -48,6 +49,7 @@ from database import (
     create_user,
     get_user_by_username,
     get_user_by_id,
+    update_user_password,
     update_conversation_title,
     get_last_message_preview,
 )
@@ -402,14 +404,15 @@ async def transcribe(
 
 @app.post("/speak")
 async def speak(req: ChatRequest):
+    speech_text = strip_thinking(req.message)
     print("=" * 60)
     print(f"[API] POST /speak — Request received")
-    print(f"[API]   Text to speak: '{req.message[:80]}...' ({len(req.message)} chars)")
+    print(f"[API]   Text to speak: '{speech_text[:80]}...' ({len(speech_text)} chars)")
     print(f"[API]   Language: '{req.language}'")
     print("=" * 60)
 
     audio_path = generate_speech(
-        req.message,
+        speech_text,
         req.language,
         "response.mp3"
     )
@@ -534,26 +537,88 @@ class ChatRequestWithConversation(BaseModel):
 
 @app.post("/api/v2/chat")
 async def chat_v2(
-    req: ChatRequestWithConversation,
+    request: Request,
     user: Optional[dict] = Depends(get_current_user),
 ):
     """Send a message with conversation persistence.
     
+    Supports file attachments (images, PDFs, DOCX, TXT).
     Supports authenticated users (creates user-scoped conversations)
     and anonymous users (creates global conversations).
     """
+    content_type = request.headers.get("content-type", "").lower()
+    file: Optional[UploadFile] = None
+
+    if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
+        form = await request.form()
+        message = str(form.get("message") or "")
+        language = str(form.get("language") or "en")
+        raw_conversation_id = form.get("conversation_id")
+        form_file = form.get("file")
+        if form_file is not None and getattr(form_file, "filename", None):
+            file = form_file
+    else:
+        try:
+            payload = await request.json()
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail="Expected JSON or multipart form data") from exc
+
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=422, detail="Request body must be a JSON object")
+
+        message = str(payload.get("message") or "")
+        language = str(payload.get("language") or "en")
+        raw_conversation_id = payload.get("conversation_id")
+
+    if not message.strip():
+        raise HTTPException(status_code=422, detail="message is required")
+
+    if raw_conversation_id in (None, "", "null", "undefined"):
+        conversation_id = None
+    else:
+        try:
+            conversation_id = int(raw_conversation_id)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail="conversation_id must be an integer") from exc
+
     print("=" * 60)
     print(f"[API] POST /api/v2/chat — Request received")
-    print(f"[API]   Message: '{req.message}'")
-    print(f"[API]   Language: '{req.language}'")
-    print(f"[API]   Conversation ID: {req.conversation_id}")
+    print(f"[API]   Message: '{message}'")
+    print(f"[API]   Language: '{language}'")
+    print(f"[API]   Conversation ID: {conversation_id}")
+    print(f"[API]   File attached: {file is not None}")
+    if file:
+        print(f"[API]   File name: '{file.filename}', size: {file.size} bytes")
     print(f"[API]   Authenticated: {user is not None}")
     print("=" * 60)
 
+    # Process file attachment if present
+    file_info = None
+    if file and file.filename:
+        import tempfile
+        from file_processor import process_uploaded_file
+        
+        # Save uploaded file temporarily
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, file.filename)
+        with open(temp_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+        
+        file_info = process_uploaded_file(temp_path, file.filename)
+        
+        # Clean up temp file
+        try:
+            os.remove(temp_path)
+        except:
+            pass
+        
+        print(f"[API]   File processed: type={file_info['type']}, content_len={len(str(file_info.get('content', '')))}")
+
     # Create or reuse conversation
-    conv_id = req.conversation_id
+    conv_id = conversation_id
     if conv_id is None:
-        title = req.message[:50] + ("..." if len(req.message) > 50 else "")
+        title = message[:50] + ("..." if len(message) > 50 else "")
         if user:
             conv_id = create_conversation_for_user(
                 user_id=user["user_id"],
@@ -568,16 +633,24 @@ async def chat_v2(
             return {"error": f"Conversation #{conv_id} not found"}, 404
         print(f"[API]   Using existing conversation #{conv_id}")
 
-    # Save user message
-    add_message(conv_id, "user", req.message, language=req.language)
+    # Save user message (with file info in metadata if present)
+    msg_metadata = {}
+    if file_info:
+        msg_metadata["file"] = {
+            "type": file_info["type"],
+            "filename": file_info["filename"],
+            "description": file_info["description"],
+        }
+    
+    add_message(conv_id, "user", message, language=language, metadata=msg_metadata if msg_metadata else None)
 
-    # Execute the agent
-    result = execute_chat_request(req.message, req.language)
+    # Execute the agent (pass file_info for multimodal processing)
+    result = execute_chat_request(message, language, file_info=file_info)
 
     # Save assistant message
     add_message(
         conv_id, "assistant", result.response,
-        language=req.language,
+        language=language,
         tool_used=result.integration,
         metadata={"integration": result.integration, **result.metadata},
     )
@@ -585,7 +658,7 @@ async def chat_v2(
     # Update title from first message if still default
     existing = get_conversation(conv_id)
     if existing and existing.get("title", "").startswith("New Conversation"):
-        new_title = req.message[:50] + ("..." if len(req.message) > 50 else "")
+        new_title = message[:50] + ("..." if len(message) > 50 else "")
         update_conversation_title(conv_id, new_title)
 
     ui = build_genui_response(
@@ -724,6 +797,11 @@ class AuthSignInRequest(BaseModel):
     password: str
 
 
+class AuthChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 @app.post("/api/auth/signup")
 async def signup(req: AuthSignUpRequest):
     """Register a new user with username and password."""
@@ -846,6 +924,56 @@ async def signout(
     print(f"[API]   User #{user['user_id']} signed out successfully")
     print(f"[API] POST /api/auth/signout — Response sent")
     return {"status": "signed_out"}
+
+
+@app.post("/api/auth/change-password")
+async def change_password(
+    req: AuthChangePasswordRequest,
+    user: dict = Depends(require_current_user),
+):
+    """Change the password for the currently authenticated user."""
+    print("=" * 60)
+    print(f"[API] POST /api/auth/change-password — Request received")
+    print(f"[API]   User #{user['user_id']} changing password")
+    print("=" * 60)
+
+    # Validate new password length
+    if len(req.new_password) < 4:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 4 characters",
+        )
+
+    # Fetch the full user record to verify current password
+    full_user = get_user_by_id(user["user_id"])
+    if not full_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    # Verify current password
+    if not verify_password(req.current_password, full_user["password_hash"]):
+        print(f"[API]   Incorrect current password for user #{user['user_id']}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect",
+        )
+
+    # Hash the new password and update
+    new_hash = hash_password(req.new_password)
+    updated = update_user_password(user["user_id"], new_hash)
+
+    if not updated:
+        print(f"[API]   Failed to update password for user #{user['user_id']}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update password",
+        )
+
+    print(f"[API]   Password changed successfully for user #{user['user_id']}")
+    print(f"[API] POST /api/auth/change-password — Response sent")
+    return {"status": "password_changed"}
 
 
 # ── LiveKit Cloud Integration ──────────────────────────────────────────────
